@@ -1,0 +1,21 @@
+.git
+.gitignore
+Dockerfile
+docker-compose.yml
+.env
+.env.*
+*.md
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# tests / builds
+*.log
+*.out
+*.exe
+*.test
+bin/
