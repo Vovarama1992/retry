@@ -4,12 +4,10 @@ export
 .PHONY: swagger-track tidy refresh print
 
 swagger-track:
-	docker run --rm \
-		-v $(PWD):/app \
-		-w /app \
-		swaggo/swag init \
-		--generalInfo ./track-service/cmd/main.go \
-		--output ./track-service/docs \
+	swag init \
+		--dir ./track-service \
+		--generalInfo cmd/main.go \
+		--output track-service/docs \
 		--parseDependency \
 		--parseInternal
 

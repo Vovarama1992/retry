@@ -6,9 +6,12 @@ import (
 
 	"github.com/Vovarama1992/retry/pkg/domain"
 	track "github.com/Vovarama1992/retry/track-service/internal/ports"
+	visit "github.com/Vovarama1992/retry/track-service/internal/visit/models"
 	visit_ports "github.com/Vovarama1992/retry/track-service/internal/visit/ports"
 	validator "github.com/go-playground/validator/v10"
 )
+
+var _ = visit.VisitSourceStat{}
 
 type Handler struct {
 	trackService track.Service
@@ -24,6 +27,15 @@ func NewHandler(trackService track.Service, visitService visit_ports.VisitServic
 
 var validate = validator.New()
 
+// TrackVisit фиксирует визит.
+// @Summary Зафиксировать визит
+// @Description Создаёт новое действие типа "visit"
+// @Accept json
+// @Produce json
+// @Param visit body VisitRequestDTO true "Информация о визите"
+// @Success 201 {object} map[string]string
+// @Failure 400,500 {string} string
+// @Router /track/visit [post]
 func (h *Handler) TrackVisit(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -59,6 +71,12 @@ func (h *Handler) TrackVisit(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "visit recorded"})
 }
 
+// GetAllVisits возвращает все визиты.
+// @Summary Получить все визиты
+// @Produce json
+// @Success 200 {array} domain.Action
+// @Failure 500 {string} string
+// @Router /track/visit/all [get]
 func (h *Handler) GetAllVisits(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -75,6 +93,12 @@ func (h *Handler) GetAllVisits(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(actions)
 }
 
+// GetStatsBySource возвращает статистику по источникам.
+// @Summary Статистика по источникам визитов
+// @Produce json
+// @Success 200 {array} visit.VisitSourceStat
+// @Failure 500 {string} string
+// @Router /track/stats/by-source [get]
 func (h *Handler) GetStatsBySource(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)

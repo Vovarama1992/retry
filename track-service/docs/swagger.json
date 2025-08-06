@@ -1,0 +1,164 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Сервис для отслеживания визитов и действий",
+        "title": "Track Service API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/",
+    "paths": {
+        "/track/stats/by-source": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Статистика по источникам визитов",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_Vovarama1992_retry_track-service_internal_visit_models.VisitSourceStat"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/track/visit": {
+            "post": {
+                "description": "Создаёт новое действие типа \"visit\"",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Зафиксировать визит",
+                "parameters": [
+                    {
+                        "description": "Информация о визите",
+                        "name": "visit",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_visit_delivery.VisitRequestDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/track/visit/all": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Получить все визиты",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.Action"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "domain.Action": {
+            "type": "object",
+            "properties": {
+                "actionTypeID": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "ipaddress": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "visitID": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Vovarama1992_retry_track-service_internal_visit_models.VisitSourceStat": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "source": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_visit_delivery.VisitRequestDTO": {
+            "type": "object",
+            "required": [
+                "source",
+                "timestamp",
+                "visit_id"
+            ],
+            "properties": {
+                "source": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "visit_id": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

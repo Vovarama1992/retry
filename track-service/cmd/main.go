@@ -10,7 +10,7 @@ import (
 	"github.com/Vovarama1992/go-utils/logger"
 	service "github.com/Vovarama1992/retry/track-service/internal/domain"
 	"github.com/Vovarama1992/retry/track-service/internal/infra/postgres"
-	delivery "github.com/Vovarama1992/retry/track-service/internal/visit/delivery"
+	visithttp "github.com/Vovarama1992/retry/track-service/internal/visit/delivery"
 	visitdomain "github.com/Vovarama1992/retry/track-service/internal/visit/domain"
 	visitinfra "github.com/Vovarama1992/retry/track-service/internal/visit/infra"
 	"github.com/go-chi/chi/v5"
@@ -54,17 +54,17 @@ func main() {
 	trackService := service.NewTrackService(actionRepo, visitService)
 
 	// delivery
-	handler := delivery.NewHandler(trackService, visitService)
+	handler := visithttp.NewHandler(trackService, visitService)
 
 	// 🔧 Хак для swag, чтобы он точно увидел аннотации и хендлеры
-	_ = delivery.VisitRequestDTO{}
-	var _ = delivery.RegisterRoutes
+	_ = visithttp.VisitRequestDTO{}
+	var _ = visithttp.RegisterRoutes
 	var _ = handler.TrackVisit
 	var _ = handler.GetAllVisits
 	var _ = handler.GetStatsBySource
 
 	r := chi.NewRouter()
-	delivery.RegisterRoutes(r, handler)
+	visithttp.RegisterRoutes(r, handler)
 
 	// ping
 	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
