@@ -9,13 +9,19 @@ RUN go mod download
 
 COPY . .
 
+# Сборка бинарника в отдельный файл
 RUN go build -o track-service-binary ./track-service/cmd/main.go
 
 FROM debian:bookworm-slim
 
-WORKDIR /app
+# В финальном образе мы создаём структуру /app/track-service
+WORKDIR /app/track-service
 
-COPY --from=builder /app/track-service-binary /app/track-service
+# Кладём бинарник
+COPY --from=builder /app/track-service-binary ./track-service
+
+# Кладём docs (swagger.json, .go, .yaml)
+COPY --from=builder /app/track-service/docs ./docs
 
 EXPOSE 8080
 
