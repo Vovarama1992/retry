@@ -55,9 +55,18 @@ func main() {
 
 	// delivery
 	handler := delivery.NewHandler(trackService, visitService)
+
+	// 🔧 Хак для swag, чтобы он точно увидел аннотации и хендлеры
+	_ = delivery.VisitRequestDTO{}
+	var _ = delivery.RegisterRoutes
+	var _ = handler.TrackVisit
+	var _ = handler.GetAllVisits
+	var _ = handler.GetStatsBySource
+
 	r := chi.NewRouter()
 	delivery.RegisterRoutes(r, handler)
 
+	// ping
 	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("pong"))

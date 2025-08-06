@@ -4,6 +4,7 @@ go 1.23.0
 
 require (
 	github.com/Vovarama1992/go-utils v0.0.0-20250804130552-742b8209ae83
+	github.com/go-chi/chi/v5 v5.2.2
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/jackc/pgx/v5 v5.7.5
 	github.com/sony/gobreaker v1.0.0
@@ -15,7 +16,6 @@ require (
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
-	github.com/go-chi/chi/v5 v5.2.2 // indirect
 	github.com/go-chi/httprate v0.15.0 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.20.0 // indirect
