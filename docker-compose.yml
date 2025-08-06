@@ -5,7 +5,7 @@ services:
     container_name: track-service
     build:
       context: .
-      dockerfile: ./track-service/cmd/Dockerfile
+      dockerfile: ./track-service/Dockerfile
     ports:
       - "${TRACK_SERVICE_PORT}:${TRACK_SERVICE_PORT}"
     env_file:
