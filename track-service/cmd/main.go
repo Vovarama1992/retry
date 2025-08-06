@@ -64,7 +64,7 @@ func main() {
 	})
 
 	// swagger
-	r.Handle("/swagger/", httpSwagger.WrapHandler)
+	r.Handle("/swagger/*", httpSwagger.WrapHandler)
 
 	// run
 	addr := ":" + os.Getenv("TRACK_SERVICE_PORT")
