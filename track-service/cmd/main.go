@@ -58,6 +58,11 @@ func main() {
 	r := chi.NewRouter()
 	delivery.RegisterRoutes(r, handler)
 
+	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("pong"))
+	})
+
 	// swagger
 	r.Handle("/swagger/", httpSwagger.WrapHandler)
 
