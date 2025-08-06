@@ -13,6 +13,8 @@ services:
     depends_on:
       - db
     restart: unless-stopped
+    volumes:
+      - ./migrations:/app/migrations  # чтобы track видел миграции (если надо)
 
   db:
     image: postgres:16
@@ -26,6 +28,17 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
     restart: unless-stopped
+
+  migrate:
+    image: migrate/migrate
+    volumes:
+      - ./migrations:/migrations
+    command:
+      - "-path=/migrations"
+      - "-database=${DATABASE_URL}"
+      - "up"
+    depends_on:
+      - db
 
 volumes:
   pg_data:
