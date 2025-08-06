@@ -38,5 +38,16 @@ services:
     depends_on:
       - db
 
+  nginx:
+    image: nginx:latest
+    container_name: track-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - track
+    restart: unless-stopped
+
 volumes:
   pg_data:

@@ -21,7 +21,7 @@ refresh:
 	until docker-compose exec db pg_isready -U $(POSTGRES_USER); do sleep 1; done
 	sleep 2
 	docker-compose run --rm migrate
-	docker-compose up -d track
+	docker-compose up -d track nginx
 
 print:
 	echo $$DATABASE_URL
