@@ -14,6 +14,7 @@ import (
 	visitdomain "github.com/Vovarama1992/retry/track-service/internal/visit/domain"
 	visitinfra "github.com/Vovarama1992/retry/track-service/internal/visit/infra"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 
 	_ "github.com/Vovarama1992/retry/track-service/docs"
 
@@ -64,6 +65,14 @@ func main() {
 	var _ = handler.GetStatsBySource
 
 	r := chi.NewRouter()
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"https://retry.school"},
+		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
 	visithttp.RegisterRoutes(r, handler)
 
 	// ping
