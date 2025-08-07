@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Vovarama1992/go-utils/logger"
 	"github.com/Vovarama1992/retry/pkg/domain"
 	track "github.com/Vovarama1992/retry/track-service/internal/ports"
 	visit "github.com/Vovarama1992/retry/track-service/internal/visit/models"
@@ -16,12 +17,14 @@ var _ = visit.VisitSourceStat{}
 type Handler struct {
 	trackService track.Service
 	visitService visit_ports.VisitService
+	logger       logger.Logger
 }
 
-func NewHandler(trackService track.Service, visitService visit_ports.VisitService) *Handler {
+func NewHandler(trackService track.Service, visitService visit_ports.VisitService, logger logger.Logger) *Handler {
 	return &Handler{
 		trackService: trackService,
 		visitService: visitService,
+		logger:       logger,
 	}
 }
 
@@ -63,6 +66,13 @@ func (h *Handler) TrackVisit(w http.ResponseWriter, r *http.Request) {
 
 	_, err := h.trackService.TrackAction(r.Context(), "visit", action)
 	if err != nil {
+		h.logger.Log(logger.LogEntry{
+			Level:   "error",
+			Message: err.Error(), // 👈 пишем голую ошибку, как есть
+			Error:   err,
+			Service: "track",
+			Method:  "TrackVisit",
+		})
 		http.Error(w, "Failed to track visit", http.StatusInternalServerError)
 		return
 	}
@@ -85,6 +95,13 @@ func (h *Handler) GetAllVisits(w http.ResponseWriter, r *http.Request) {
 
 	actions, err := h.visitService.GetAllVisits(r.Context())
 	if err != nil {
+		h.logger.Log(logger.LogEntry{
+			Level:   "error",
+			Message: err.Error(),
+			Error:   err,
+			Service: "track",
+			Method:  "GetAllVisits",
+		})
 		http.Error(w, "Failed to fetch visits", http.StatusInternalServerError)
 		return
 	}
@@ -107,6 +124,13 @@ func (h *Handler) GetStatsBySource(w http.ResponseWriter, r *http.Request) {
 
 	stats, err := h.visitService.GetStatsBySource(r.Context())
 	if err != nil {
+		h.logger.Log(logger.LogEntry{
+			Level:   "error",
+			Message: err.Error(),
+			Error:   err,
+			Service: "track",
+			Method:  "GetStatsBySource",
+		})
 		http.Error(w, "Failed to fetch stats", http.StatusInternalServerError)
 		return
 	}

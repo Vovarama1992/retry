@@ -12,7 +12,7 @@ services:
       - db
     restart: unless-stopped
     volumes:
-      - ./migrations:/app/migrations  # чтобы track видел миграции (если надо)
+      - ./migrations:/app/migrations
 
   db:
     image: postgres:16
@@ -43,8 +43,10 @@ services:
     container_name: track-nginx
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - track
     restart: unless-stopped

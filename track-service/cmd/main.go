@@ -54,7 +54,7 @@ func main() {
 	trackService := service.NewTrackService(actionRepo, visitService)
 
 	// delivery
-	handler := visithttp.NewHandler(trackService, visitService)
+	handler := visithttp.NewHandler(trackService, visitService, l)
 
 	// 🔧 Хак для swag, чтобы он точно увидел аннотации и хендлеры
 	_ = visithttp.VisitRequestDTO{}
