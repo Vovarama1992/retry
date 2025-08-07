@@ -25,7 +25,7 @@ func (r *actionRepo) GetActionTypeIDByName(ctx context.Context, name string) (in
 	var id int64
 	_, err := r.breaker.Execute(func() (any, error) {
 		return nil, r.db.QueryRowContext(ctx,
-			`SELECT id FROM action_type WHERE name = $1`, name,
+			`SELECT id FROM action_types WHERE name = $1`, name,
 		).Scan(&id)
 	})
 	return id, err
@@ -35,9 +35,9 @@ func (r *actionRepo) CreateAction(ctx context.Context, typeID int64, action doma
 	var id int64
 	_, err := r.breaker.Execute(func() (any, error) {
 		return nil, r.db.QueryRowContext(ctx,
-			`INSERT INTO action (type_id, visit_id, source, ip, created_at)
-			 VALUES ($1, $2, $3, $4, $5)
-			 RETURNING id`,
+			`INSERT INTO actions (action_type_id, visit_id, source, ip_address, timestamp)
+	 VALUES ($1, $2, $3, $4, $5)
+	 RETURNING id`,
 			typeID, action.VisitID, action.Source, action.IPAddress, action.Timestamp,
 		).Scan(&id)
 	})
@@ -46,7 +46,7 @@ func (r *actionRepo) CreateAction(ctx context.Context, typeID int64, action doma
 
 func (r *actionRepo) GetAllActions(ctx context.Context) ([]domain.Action, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, type_id, visit_id, source, ip, created_at FROM action`,
+		`SELECT id, action_type_id, visit_id, source, ip_address, timestamp FROM actions`,
 	)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,8 @@ func (r *actionRepo) GetAllActions(ctx context.Context) ([]domain.Action, error)
 
 func (r *actionRepo) GetActionsByType(ctx context.Context, typeID int64) ([]domain.Action, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, type_id, visit_id, source, ip, created_at FROM action WHERE type_id = $1`,
+		`SELECT id, action_type_id, visit_id, source, ip_address, timestamp
+	 FROM actions WHERE action_type_id = $1`,
 		typeID,
 	)
 	if err != nil {
@@ -87,7 +88,8 @@ func (r *actionRepo) GetActionsByType(ctx context.Context, typeID int64) ([]doma
 
 func (r *actionRepo) GetActionsByVisitID(ctx context.Context, visitID string) ([]domain.Action, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, type_id, visit_id, source, ip, created_at FROM action WHERE visit_id = $1`,
+		`SELECT id, action_type_id, visit_id, source, ip_address, timestamp
+	 FROM actions WHERE visit_id = $1`,
 		visitID,
 	)
 	if err != nil {

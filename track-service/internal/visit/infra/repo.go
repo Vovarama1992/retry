@@ -26,12 +26,13 @@ func (r *VisitRepo) GetVisitStatsBySource(ctx context.Context) ([]visit.VisitSou
 
 	_, err := r.breaker.Execute(func() (any, error) {
 		rows, err := r.db.QueryContext(ctx, `
-			SELECT source, COUNT(*) FROM action
-			JOIN action_type ON action.type_id = action_type.id
-			WHERE action_type.name = 'visit'
-			GROUP BY source
-			ORDER BY COUNT(*) DESC`,
-		)
+			SELECT a.source, COUNT(*) 
+			FROM actions a
+			JOIN action_types t ON a.action_type_id = t.id
+			WHERE t.name = 'visit'
+			GROUP BY a.source
+			ORDER BY COUNT(*) DESC
+		`)
 		if err != nil {
 			return nil, err
 		}
@@ -61,8 +62,8 @@ func (r *VisitRepo) GetAllVisits(ctx context.Context) ([]domain.Action, error) {
 	_, err := r.breaker.Execute(func() (any, error) {
 		rows, err := r.db.QueryContext(ctx, `
 			SELECT a.id, a.action_type_id, a.visit_id, a.source, a.ip_address, a.timestamp
-			FROM action a
-			JOIN action_type t ON a.action_type_id = t.id
+			FROM actions a
+			JOIN action_types t ON a.action_type_id = t.id
 			WHERE t.name = 'visit'
 			ORDER BY a.timestamp DESC
 		`)
