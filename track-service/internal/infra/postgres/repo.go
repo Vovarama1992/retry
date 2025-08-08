@@ -45,9 +45,18 @@ func (r *actionRepo) CreateAction(ctx context.Context, typeID int64, action doma
 }
 
 func (r *actionRepo) GetAllActions(ctx context.Context) ([]domain.Action, error) {
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, action_type_id, visit_id, source, ip_address, timestamp FROM actions`,
-	)
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT a.id,
+		       a.action_type_id,
+		       at.name AS action_type_name,
+		       a.visit_id,
+		       a.source,
+		       a.ip_address,
+		       a.timestamp
+		FROM actions a
+		JOIN action_types at ON at.id = a.action_type_id
+		ORDER BY a.id
+	`)
 	if err != nil {
 		return nil, err
 	}
@@ -56,14 +65,24 @@ func (r *actionRepo) GetAllActions(ctx context.Context) ([]domain.Action, error)
 	var actions []domain.Action
 	for rows.Next() {
 		var a domain.Action
-		if err := rows.Scan(&a.ID, &a.ActionTypeID, &a.VisitID, &a.Source, &a.IPAddress, &a.Timestamp); err != nil {
+		if err := rows.Scan(
+			&a.ID,
+			&a.ActionTypeID,
+			&a.ActionTypeName,
+			&a.VisitID,
+			&a.Source,
+			&a.IPAddress,
+			&a.Timestamp,
+		); err != nil {
 			return nil, err
 		}
 		actions = append(actions, a)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return actions, nil
 }
-
 func (r *actionRepo) GetActionsByType(ctx context.Context, typeID int64) ([]domain.Action, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT id, action_type_id, visit_id, source, ip_address, timestamp
