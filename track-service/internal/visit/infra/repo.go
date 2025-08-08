@@ -61,7 +61,13 @@ func (r *VisitRepo) GetAllVisits(ctx context.Context) ([]domain.Action, error) {
 
 	_, err := r.breaker.Execute(func() (any, error) {
 		rows, err := r.db.QueryContext(ctx, `
-			SELECT a.id, a.action_type_id, a.visit_id, a.source, a.ip_address, a.timestamp
+			SELECT a.id,
+			       a.action_type_id,
+			       t.name AS action_type_name,
+			       a.visit_id,
+			       a.source,
+			       a.ip_address,
+			       a.timestamp
 			FROM actions a
 			JOIN action_types t ON a.action_type_id = t.id
 			WHERE t.name = 'visit'
@@ -74,7 +80,15 @@ func (r *VisitRepo) GetAllVisits(ctx context.Context) ([]domain.Action, error) {
 
 		for rows.Next() {
 			var a domain.Action
-			if err := rows.Scan(&a.ID, &a.ActionTypeID, &a.VisitID, &a.Source, &a.IPAddress, &a.Timestamp); err != nil {
+			if err := rows.Scan(
+				&a.ID,
+				&a.ActionTypeID,
+				&a.ActionTypeName,
+				&a.VisitID,
+				&a.Source,
+				&a.IPAddress,
+				&a.Timestamp,
+			); err != nil {
 				return nil, err
 			}
 			result = append(result, a)
