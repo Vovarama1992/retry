@@ -32,7 +32,7 @@ services:
     volumes:
       - ./migrations:/app/migrations
     command:
-      - "-path=/migrations"
+      - "-path=/app/migrations"
       - "-database=${DATABASE_URL}"
       - "up"
     depends_on:
