@@ -28,7 +28,7 @@ services:
     restart: unless-stopped
 
   migrate:
-    image: migrate/migrate
+    image: migrate/migrate:v4.17.0
     volumes:
       - ./migrations:/migrations
     command:
