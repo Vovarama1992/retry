@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/Vovarama1992/retry/pkg/apperror"
 	"github.com/Vovarama1992/retry/pkg/domain"
 	visit "github.com/Vovarama1992/retry/track-service/internal/visit/models"
 	"github.com/sony/gobreaker"
@@ -53,10 +54,14 @@ func (r *VisitRepo) GetVisitStatsBySource(ctx context.Context) ([]visit.VisitSou
 		return nil, err
 	}
 
+	if len(result) == 0 {
+		return nil, apperror.NotFound("no visit stats found")
+	}
+
 	return result, nil
 }
 
-func (r *VisitRepo) GetAllVisits(ctx context.Context) ([]domain.Action, error) {
+func (r *VisitRepo) GetAllVisits(ctx context.Context, limit, offset int) ([]domain.Action, error) {
 	var result []domain.Action
 
 	_, err := r.breaker.Execute(func() (any, error) {
@@ -72,7 +77,8 @@ func (r *VisitRepo) GetAllVisits(ctx context.Context) ([]domain.Action, error) {
 			JOIN action_types t ON a.action_type_id = t.id
 			WHERE t.name = 'visit'
 			ORDER BY a.timestamp DESC
-		`)
+			LIMIT $1 OFFSET $2
+		`, limit, offset)
 		if err != nil {
 			return nil, err
 		}
@@ -99,6 +105,10 @@ func (r *VisitRepo) GetAllVisits(ctx context.Context) ([]domain.Action, error) {
 
 	if err != nil {
 		return nil, err
+	}
+
+	if len(result) == 0 {
+		return nil, apperror.NotFound("no visits found")
 	}
 
 	return result, nil

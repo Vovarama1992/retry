@@ -8,8 +8,12 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	"github.com/Vovarama1992/go-utils/logger"
+	actionhttp "github.com/Vovarama1992/retry/track-service/internal/delivery"
 	service "github.com/Vovarama1992/retry/track-service/internal/domain"
 	"github.com/Vovarama1992/retry/track-service/internal/infra/postgres"
+	sessionhttp "github.com/Vovarama1992/retry/track-service/internal/session/delivery"
+	sessiondomain "github.com/Vovarama1992/retry/track-service/internal/session/domain"
+	sessioninfra "github.com/Vovarama1992/retry/track-service/internal/session/infra"
 	visithttp "github.com/Vovarama1992/retry/track-service/internal/visit/delivery"
 	visitdomain "github.com/Vovarama1992/retry/track-service/internal/visit/domain"
 	visitinfra "github.com/Vovarama1992/retry/track-service/internal/visit/infra"
@@ -23,7 +27,7 @@ import (
 
 // @title Track Service API
 // @version 1.0
-// @description Сервис для отслеживания визитов и действий
+// @description Сервис для отслеживания визитов, сессий и действий
 // @BasePath /
 func main() {
 	// logger
@@ -47,23 +51,22 @@ func main() {
 
 	breaker := postgres.NewPgBreaker()
 
-	// repos + services
+	// repos
 	actionRepo := postgres.NewActionRepo(db, breaker)
 	visitRepo := visitinfra.NewVisitRepo(db, breaker)
+	sessionRepo := sessioninfra.NewSessionRepo(db, breaker)
 
+	// services
 	visitService := visitdomain.NewVisitService(visitRepo)
+	sessionService := sessiondomain.NewSessionService(sessionRepo)
 	trackService := service.NewTrackService(actionRepo, visitService)
 
 	// delivery
-	handler := visithttp.NewHandler(trackService, visitService, l)
+	visitHandler := visithttp.NewHandler(trackService, visitService, l)
+	actionHandler := actionhttp.NewHandler(trackService, l)
+	sessionHandler := sessionhttp.NewHandler(sessionService, l)
 
-	// 🔧 Хак для swag, чтобы он точно увидел аннотации и хендлеры
-	_ = visithttp.VisitRequestDTO{}
-	var _ = visithttp.RegisterRoutes
-	var _ = handler.TrackVisit
-	var _ = handler.GetAllVisits
-	var _ = handler.GetStatsBySource
-
+	// router
 	r := chi.NewRouter()
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://retry.school"},
@@ -73,7 +76,11 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
-	visithttp.RegisterRoutes(r, handler)
+
+	// routes
+	visithttp.RegisterRoutes(r, visitHandler)
+	actionhttp.RegisterRoutes(r, actionHandler)
+	sessionhttp.RegisterRoutes(r, sessionHandler)
 
 	// ping
 	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {

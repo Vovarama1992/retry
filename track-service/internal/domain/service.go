@@ -29,8 +29,8 @@ func (s *trackService) TrackAction(ctx context.Context, actionTypeName string, a
 	return s.actionRepo.CreateAction(ctx, typeID, action)
 }
 
-func (s *trackService) GetAllActions(ctx context.Context) ([]domain.Action, error) {
-	return s.actionRepo.GetAllActions(ctx)
+func (s *trackService) GetAllActions(ctx context.Context, limit, offset int) ([]domain.Action, error) {
+	return s.actionRepo.GetAllActions(ctx, limit, offset)
 }
 
 func (s *trackService) GetActionsByType(ctx context.Context, actionTypeName string) ([]domain.Action, error) {
@@ -47,4 +47,8 @@ func (s *trackService) GetActionsByVisitID(ctx context.Context, visitID string) 
 
 func (s *trackService) GetVisitStatsBySource(ctx context.Context) ([]visit.VisitSourceStat, error) {
 	return s.visitService.GetStatsBySource(ctx)
+}
+
+func (s *trackService) GetActionsGroupedByVisitID(ctx context.Context, limit, offset int) (map[string][]domain.Action, error) {
+	return s.actionRepo.GetActionsGroupedByVisitID(ctx, limit, offset)
 }

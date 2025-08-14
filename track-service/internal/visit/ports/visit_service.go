@@ -9,5 +9,5 @@ import (
 
 type VisitService interface {
 	GetStatsBySource(ctx context.Context) ([]model.VisitSourceStat, error)
-	GetAllVisits(ctx context.Context) ([]domain.Action, error)
+	GetAllVisits(ctx context.Context, limit, offset int) ([]domain.Action, error)
 }

@@ -10,5 +10,7 @@ import (
 type VisitRepo interface {
 	// Агрегация по источникам визитов
 	GetVisitStatsBySource(ctx context.Context) ([]visit.VisitSourceStat, error)
-	GetAllVisits(ctx context.Context) ([]domain.Action, error)
+
+	// Получить все визиты (с пагинацией)
+	GetAllVisits(ctx context.Context, limit, offset int) ([]domain.Action, error)
 }

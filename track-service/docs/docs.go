@@ -15,6 +15,197 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/track/action": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Зафиксировать действие",
+                "parameters": [
+                    {
+                        "description": "Информация о действии",
+                        "name": "action",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery.ActionRequestDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/track/action/all": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Получить все действия",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.Action"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/track/action/grouped": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Получить действия, сгруппированные по visit_id",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/domain.Action"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/track/action/grouped-by-session": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Получить действия, сгруппированные по session_id",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/domain.Action"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/track/session/grouped-by-visit": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Получить количество сессий на каждый visit_id",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/track/session/stats": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Получить статистику по сессиям",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.SessionStats"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/track/stats/by-source": {
             "get": {
                 "produces": [
@@ -29,6 +220,12 @@ const docTemplate = `{
                             "items": {
                                 "$ref": "#/definitions/github_com_Vovarama1992_retry_track-service_internal_visit_models.VisitSourceStat"
                             }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
                         }
                     },
                     "500": {
@@ -77,6 +274,12 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -102,6 +305,12 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -119,11 +328,25 @@ const docTemplate = `{
                 "actionTypeID": {
                     "type": "integer"
                 },
+                "actionTypeName": {
+                    "description": "опционально, может быть пустым",
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer",
                     "format": "int64"
                 },
                 "ipaddress": {
+                    "type": "string"
+                },
+                "meta": {
+                    "description": "хранит meta как JSON, можно парсить в map при необходимости",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "sessionID": {
                     "type": "string"
                 },
                 "source": {
@@ -134,6 +357,35 @@ const docTemplate = `{
                 },
                 "visitID": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.SessionStats": {
+            "type": "object",
+            "properties": {
+                "avg_actions_per_session": {
+                    "type": "number"
+                },
+                "avg_duration_seconds": {
+                    "type": "number"
+                },
+                "first_session_at": {
+                    "type": "string"
+                },
+                "last_session_at": {
+                    "type": "string"
+                },
+                "max_actions_per_session": {
+                    "type": "integer"
+                },
+                "max_duration_seconds": {
+                    "type": "number"
+                },
+                "total_actions": {
+                    "type": "integer"
+                },
+                "total_sessions": {
+                    "type": "integer"
                 }
             }
         },
@@ -148,14 +400,51 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_delivery.ActionRequestDTO": {
+            "type": "object",
+            "required": [
+                "session_id",
+                "source",
+                "timestamp",
+                "type",
+                "visit_id"
+            ],
+            "properties": {
+                "meta": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "session_id": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "visit_id": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_visit_delivery.VisitRequestDTO": {
             "type": "object",
             "required": [
+                "session_id",
                 "source",
                 "timestamp",
                 "visit_id"
             ],
             "properties": {
+                "session_id": {
+                    "type": "string"
+                },
                 "source": {
                     "type": "string"
                 },

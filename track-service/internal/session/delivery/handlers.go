@@ -1,0 +1,123 @@
+package sessionhttp
+
+import (
+	"encoding/json"
+	"net/http"
+	"os"
+	"strconv"
+
+	"github.com/Vovarama1992/go-utils/logger"
+	"github.com/Vovarama1992/retry/pkg/apperror"
+	"github.com/Vovarama1992/retry/track-service/internal/session/ports"
+)
+
+type Handler struct {
+	sessionService ports.SessionService
+	logger         logger.Logger
+	limitGrouped   int
+}
+
+func NewHandler(sessionService ports.SessionService, logger logger.Logger) *Handler {
+	limitGrouped := 30
+	if v := os.Getenv("TRACK_ACTIONS_GROUPED_BY_SESSION_LIMIT"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			limitGrouped = n
+		}
+	}
+
+	return &Handler{
+		sessionService: sessionService,
+		logger:         logger,
+		limitGrouped:   limitGrouped,
+	}
+}
+
+func writeError(w http.ResponseWriter, log logger.Logger, service, method string, err error) {
+	if appErr, ok := err.(*apperror.AppError); ok {
+		http.Error(w, appErr.Message, appErr.Code)
+		return
+	}
+
+	log.Log(logger.LogEntry{
+		Level:   "error",
+		Message: err.Error(),
+		Error:   err,
+		Service: service,
+		Method:  method,
+	})
+	http.Error(w, "Internal server error", http.StatusInternalServerError)
+}
+
+// GetActionsGroupedBySessionID возвращает действия, сгруппированные по session_id.
+// @Summary Получить действия, сгруппированные по session_id
+// @Produce json
+// @Param offset query int false "Смещение выборки (offset)"
+// @Success 200 {object} map[string][]domain.Action
+// @Failure 404,500 {string} string
+// @Router /track/action/grouped-by-session [get]
+func (h *Handler) GetActionsGroupedBySessionID(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	offset := 0
+	if v := r.URL.Query().Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			offset = n
+		}
+	}
+
+	grouped, err := h.sessionService.GetActionsGroupedBySessionID(r.Context(), h.limitGrouped, offset)
+	if err != nil {
+		writeError(w, h.logger, "session", "GetActionsGroupedBySessionID", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(grouped)
+}
+
+// GetSessionCountByVisitID возвращает количество сессий на каждый visit_id.
+// @Summary Получить количество сессий на каждый visit_id
+// @Produce json
+// @Success 200 {object} map[string]int
+// @Failure 404,500 {string} string
+// @Router /track/session/grouped-by-visit [get]
+func (h *Handler) GetSessionCountByVisitID(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	counts, err := h.sessionService.GetSessionCountByVisitID(r.Context())
+	if err != nil {
+		writeError(w, h.logger, "session", "GetSessionCountByVisitID", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(counts)
+}
+
+// GetSessionStats возвращает агрегированную статистику по сессиям.
+// @Summary Получить статистику по сессиям
+// @Produce json
+// @Success 200 {object} domain.SessionStats
+// @Failure 404,500 {string} string
+// @Router /track/session/stats [get]
+func (h *Handler) GetSessionStats(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	stats, err := h.sessionService.GetSessionStats(r.Context())
+	if err != nil {
+		writeError(w, h.logger, "session", "GetSessionStats", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(stats)
+}

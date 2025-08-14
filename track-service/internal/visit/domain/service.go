@@ -20,6 +20,6 @@ func (s *VisitService) GetStatsBySource(ctx context.Context) ([]model.VisitSourc
 	return s.repo.GetVisitStatsBySource(ctx)
 }
 
-func (s *VisitService) GetAllVisits(ctx context.Context) ([]domain.Action, error) {
-	return s.repo.GetAllVisits(ctx)
+func (s *VisitService) GetAllVisits(ctx context.Context, limit, offset int) ([]domain.Action, error) {
+	return s.repo.GetAllVisits(ctx, limit, offset)
 }

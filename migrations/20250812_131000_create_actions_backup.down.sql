@@ -1,0 +1,3 @@
+BEGIN;
+DROP TABLE IF EXISTS actions_backup_20250812;
+COMMIT;
