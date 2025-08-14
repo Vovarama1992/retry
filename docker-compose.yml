@@ -30,9 +30,9 @@ services:
   migrate:
     image: migrate/migrate:v4.17.0
     volumes:
-      - ./migrations:/app/migrations
+      - ./migrations:/work/migrations
     command:
-      - "-path=/app/migrations"
+      - "-path=/work/migrations"
       - "-database=${DATABASE_URL}"
       - "up"
     depends_on:
