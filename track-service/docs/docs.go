@@ -66,6 +66,14 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "summary": "Получить все действия",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Смещение выборки (offset)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -91,6 +99,14 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "summary": "Получить действия, сгруппированные по visit_id",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Смещение выборки (offset)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -119,6 +135,14 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "summary": "Получить действия, сгруппированные по session_id",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Смещение выборки (offset)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -295,6 +319,14 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "summary": "Получить все визиты",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Смещение выборки (offset)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -466,7 +498,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Track Service API",
-	Description:      "Сервис для отслеживания визитов и действий",
+	Description:      "Сервис для отслеживания визитов, сессий и действий",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

@@ -1,7 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "Сервис для отслеживания визитов и действий",
+        "description": "Сервис для отслеживания визитов, сессий и действий",
         "title": "Track Service API",
         "contact": {},
         "version": "1.0"
@@ -59,6 +59,14 @@
                     "application/json"
                 ],
                 "summary": "Получить все действия",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Смещение выборки (offset)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -84,6 +92,14 @@
                     "application/json"
                 ],
                 "summary": "Получить действия, сгруппированные по visit_id",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Смещение выборки (offset)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -112,6 +128,14 @@
                     "application/json"
                 ],
                 "summary": "Получить действия, сгруппированные по session_id",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Смещение выборки (offset)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -288,6 +312,14 @@
                     "application/json"
                 ],
                 "summary": "Получить все визиты",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Смещение выборки (offset)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",

@@ -93,7 +93,7 @@ definitions:
     type: object
 info:
   contact: {}
-  description: Сервис для отслеживания визитов и действий
+  description: Сервис для отслеживания визитов, сессий и действий
   title: Track Service API
   version: "1.0"
 paths:
@@ -128,6 +128,11 @@ paths:
       summary: Зафиксировать действие
   /track/action/all:
     get:
+      parameters:
+      - description: Смещение выборки (offset)
+        in: query
+        name: offset
+        type: integer
       produces:
       - application/json
       responses:
@@ -144,6 +149,11 @@ paths:
       summary: Получить все действия
   /track/action/grouped:
     get:
+      parameters:
+      - description: Смещение выборки (offset)
+        in: query
+        name: offset
+        type: integer
       produces:
       - application/json
       responses:
@@ -162,6 +172,11 @@ paths:
       summary: Получить действия, сгруппированные по visit_id
   /track/action/grouped-by-session:
     get:
+      parameters:
+      - description: Смещение выборки (offset)
+        in: query
+        name: offset
+        type: integer
       produces:
       - application/json
       responses:
@@ -276,6 +291,11 @@ paths:
       summary: Зафиксировать визит
   /track/visit/all:
     get:
+      parameters:
+      - description: Смещение выборки (offset)
+        in: query
+        name: offset
+        type: integer
       produces:
       - application/json
       responses:
