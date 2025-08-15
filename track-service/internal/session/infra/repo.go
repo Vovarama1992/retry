@@ -25,7 +25,7 @@ func NewSessionRepo(db *sql.DB, breaker *gobreaker.CircuitBreaker) ports.Session
 
 func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, offset int) (map[string][]domain.Action, error) {
 	res, err := r.breaker.Execute(func() (any, error) {
-		// 1) Сначала группируем только валидные сессии и пагинируем по группам (самые «свежие» сверху)
+		// 1) Сгруппированные валидные сессии, пагинация по группам (последние активные сверху)
 		sessionsRows, err := r.db.QueryContext(ctx, `
 			WITH grouped AS (
 				SELECT
@@ -62,24 +62,22 @@ func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, o
 			return nil, apperror.NotFound("no actions found")
 		}
 
-		// 2) Тянем экшны только выбранных сессий.
-		//    COALESCE для всех строковых nullable-полей: visit_id, source, ip_address.
-		//    meta коалесим в '{}'::jsonb, чтобы не ломать Scan в json.RawMessage.
+		// 2) Экшны выбранных сессий + имя типа
 		rows, err := r.db.QueryContext(ctx, `
-			WITH selected AS (
-				SELECT UNNEST($1::text[]) AS session_id
-			)
+			WITH selected AS (SELECT UNNEST($1::text[]) AS session_id)
 			SELECT
 				a.id,
 				a.action_type_id,
-				COALESCE(a.visit_id, '')                    AS visit_id,
-				a.session_id,                               -- гарантированно не NULL по фильтру
-				COALESCE(a.source, '')                      AS source,
-				COALESCE(a.ip_address, '')                  AS ip_address,
-				a.timestamp,                                -- если вдруг nullable, можно COALESCE(a.timestamp, NOW())
-				COALESCE(a.meta, '{}'::jsonb)               AS meta
+				COALESCE(at.name, '')                 AS action_type_name,
+				COALESCE(a.visit_id, '')              AS visit_id,
+				a.session_id,                         -- гарантировано не NULL
+				COALESCE(a.source, '')                AS source,
+				COALESCE(a.ip_address, '')            AS ip_address,
+				a.timestamp,
+				COALESCE(a.meta, '{}'::jsonb)         AS meta
 			FROM actions a
 			JOIN selected s ON s.session_id = a.session_id
+			LEFT JOIN action_types at ON at.id = a.action_type_id
 			ORDER BY a.session_id, a.timestamp, a.id
 		`, pq.Array(sessionIDs))
 		if err != nil {
@@ -93,6 +91,7 @@ func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, o
 			if err := rows.Scan(
 				&a.ID,
 				&a.ActionTypeID,
+				&a.ActionTypeName, // ВАЖНО: третьей колонкой, как в SELECT
 				&a.VisitID,
 				&a.SessionID,
 				&a.Source,
@@ -108,10 +107,8 @@ func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, o
 			return nil, apperror.Internal("failed to read actions rows")
 		}
 		if len(result) == 0 {
-			// На всякий случай: группы выбрали, но действий не нашли (бывает при гонке) — отдадим 404
 			return nil, apperror.NotFound("no actions found")
 		}
-
 		return result, nil
 	})
 	if err != nil {
