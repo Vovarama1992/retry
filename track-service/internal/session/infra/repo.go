@@ -25,10 +25,11 @@ func NewSessionRepo(db *sql.DB, breaker *gobreaker.CircuitBreaker) ports.Session
 
 func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, offset int) (map[string][]domain.Action, error) {
 	res, err := r.breaker.Execute(func() (any, error) {
-		// Сначала получаем ограниченный список session_id
+		// Сначала получаем ограниченный список session_id (только непустые)
 		sessionsRows, err := r.db.QueryContext(ctx, `
 			SELECT DISTINCT session_id
 			FROM actions
+			WHERE session_id IS NOT NULL AND session_id <> ''
 			ORDER BY session_id
 			LIMIT $1 OFFSET $2
 		`, limit, offset)
@@ -125,25 +126,26 @@ func (r *sessionRepo) GetSessionStats(ctx context.Context) (domain.SessionStats,
 	res, err := r.breaker.Execute(func() (any, error) {
 		var stats domain.SessionStats
 		err := r.db.QueryRowContext(ctx, `
-			WITH sessions AS (
-				SELECT
-					session_id,
-					MIN(timestamp) AS start_time,
-					MAX(timestamp) AS end_time,
-					COUNT(*) AS action_count
-				FROM actions
-				GROUP BY session_id
-			)
-			SELECT
-				COUNT(*) AS total_sessions,
-				COALESCE(SUM(action_count),0) AS total_actions,
-				COALESCE(AVG(EXTRACT(EPOCH FROM (end_time - start_time))),0) AS avg_duration_seconds,
-				COALESCE(AVG(action_count),0) AS avg_actions_per_session,
-				COALESCE(MAX(EXTRACT(EPOCH FROM (end_time - start_time))),0) AS max_duration_seconds,
-				COALESCE(MAX(action_count),0) AS max_actions_per_session,
-				MIN(start_time) AS first_session_at,
-				MAX(end_time) AS last_session_at
-			FROM sessions
+WITH sessions AS (
+    SELECT
+        session_id,
+        MIN(timestamp) AS start_time,
+        MAX(timestamp) AS end_time,
+        COUNT(*) AS action_count
+    FROM actions
+    WHERE session_id IS NOT NULL AND session_id <> ''
+    GROUP BY session_id
+)
+SELECT
+    COUNT(*) AS total_sessions,
+    COALESCE(SUM(action_count), 0) AS total_actions,
+    COALESCE(AVG(EXTRACT(EPOCH FROM (end_time - start_time))), 0) AS avg_duration_seconds,
+    COALESCE(AVG(action_count), 0) AS avg_actions_per_session,
+    COALESCE(MAX(EXTRACT(EPOCH FROM (end_time - start_time))), 0) AS max_duration_seconds,
+    COALESCE(MAX(action_count), 0) AS max_actions_per_session,
+    MIN(start_time) AS first_session_at,
+    MAX(end_time) AS last_session_at
+FROM sessions
 		`).Scan(
 			&stats.TotalSessions,
 			&stats.TotalActions,
