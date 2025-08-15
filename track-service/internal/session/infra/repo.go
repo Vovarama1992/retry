@@ -25,11 +25,14 @@ func NewSessionRepo(db *sql.DB, breaker *gobreaker.CircuitBreaker) ports.Session
 
 func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, offset int) (map[string][]domain.Action, error) {
 	res, err := r.breaker.Execute(func() (any, error) {
-		// Сначала получаем ограниченный список session_id (только непустые)
+		// Получаем список session_id (только непустые) с пагинацией
 		sessionsRows, err := r.db.QueryContext(ctx, `
-			SELECT DISTINCT session_id
-			FROM actions
-			WHERE session_id IS NOT NULL AND session_id <> ''
+			SELECT session_id
+			FROM (
+				SELECT DISTINCT session_id
+				FROM actions
+				WHERE session_id IS NOT NULL AND session_id <> ''
+			) AS s
 			ORDER BY session_id
 			LIMIT $1 OFFSET $2
 		`, limit, offset)
@@ -50,7 +53,7 @@ func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, o
 			return nil, apperror.NotFound("no actions found")
 		}
 
-		// Теперь получаем действия только для этих session_id
+		// Получаем действия для выбранных session_id
 		rows, err := r.db.QueryContext(ctx, `
 			SELECT id, action_type_id, visit_id, session_id, source, ip_address, timestamp, meta
 			FROM actions

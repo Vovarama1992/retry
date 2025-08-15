@@ -73,6 +73,7 @@ func (h *Handler) TrackAction(w http.ResponseWriter, r *http.Request) {
 
 	action := domain.Action{
 		VisitID:   req.VisitID,
+		SessionID: req.SessionID, // ВАЖНО: прокинуть session_id
 		Source:    req.Source,
 		Timestamp: req.Timestamp,
 		IPAddress: ip,
