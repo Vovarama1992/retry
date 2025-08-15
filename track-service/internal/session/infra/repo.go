@@ -25,7 +25,7 @@ func NewSessionRepo(db *sql.DB, breaker *gobreaker.CircuitBreaker) ports.Session
 
 func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, offset int) (map[string][]domain.Action, error) {
 	res, err := r.breaker.Execute(func() (any, error) {
-		// Берём только валидные сессии, группируем, сортируем по последнему событию (end_time) и пагинируем ТОЛЬКО группы
+		// 1) Группируем только валидные сессии и пагинируем по группам (по end_time DESC)
 		sessionsRows, err := r.db.QueryContext(ctx, `
 			WITH grouped AS (
 				SELECT
@@ -36,11 +36,14 @@ func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, o
 				FROM actions
 				WHERE session_id IS NOT NULL AND session_id <> ''
 				GROUP BY session_id
+			),
+			page AS (
+				SELECT session_id
+				FROM grouped
+				ORDER BY end_time DESC, session_id
+				LIMIT $1 OFFSET $2
 			)
-			SELECT session_id
-			FROM grouped
-			ORDER BY end_time DESC, session_id
-			LIMIT $1 OFFSET $2
+			SELECT session_id FROM page
 		`, limit, offset)
 		if err != nil {
 			return nil, apperror.Internal("failed to query grouped session ids")
@@ -59,12 +62,23 @@ func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, o
 			return nil, apperror.NotFound("no actions found")
 		}
 
-		// Тянем экшны только выбранных групп
+		// 2) Тянем экшны только выбранных сессий. COALESCE для nullable строк.
 		rows, err := r.db.QueryContext(ctx, `
-			SELECT id, action_type_id, visit_id, session_id, source, ip_address, timestamp, meta
-			FROM actions
-			WHERE session_id = ANY($1)
-			ORDER BY session_id, timestamp, id
+			WITH selected AS (
+				SELECT UNNEST($1::text[]) AS session_id
+			)
+			SELECT
+				a.id,
+				a.action_type_id,
+				a.visit_id,
+				a.session_id,
+				COALESCE(a.source, '')     AS source,
+				COALESCE(a.ip_address, '') AS ip_address,
+				a.timestamp,
+				a.meta
+			FROM actions a
+			JOIN selected s ON s.session_id = a.session_id
+			ORDER BY a.session_id, a.timestamp, a.id
 		`, pq.Array(sessionIDs))
 		if err != nil {
 			return nil, apperror.Internal("failed to query actions for selected sessions")
