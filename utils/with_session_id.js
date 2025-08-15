@@ -135,4 +135,7 @@
   } else {
     console.log('[tracker] /track/visit skipped — existing visit_id in cookies');
   }
+  window.visitId = visitId;
+  window.sessionId = sessionId;
+  window.visitSource = source || getSource();
 })();

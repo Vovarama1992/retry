@@ -1,21 +1,34 @@
-document.addEventListener('DOMContentLoaded', function () {
-  if (window.__ctaTopHook) return; window.__ctaTopHook = true;
+document.addEventListener("DOMContentLoaded", function () {
+  var btn = document.querySelector('[data-track="click_cta_top"]');
+  if (!btn) return;
 
-  function lc(s){ return (s||'').trim().toLowerCase(); }
-  function bumpLater(){ setTimeout(()=>{ try{ localStorage.setItem('last_action_ts', String(Date.now())); }catch(e){} }, 1000); }
+  btn.addEventListener("click", function () {
+    console.log("[track] Клик по кнопке 'click_cta_top'");
 
-  const candidates = Array.from(document.querySelectorAll('a.tn-atom, a.t-btn, .t-btn a, a[href]'));
-  const btn = candidates.find(el => lc(el.textContent) === 'получить доступ');
-
-  if (!btn) { console.warn('[tracker] CTA TOP not found'); return; }
-
-  btn.addEventListener('click', function () {
-    bumpLater();
-    const rec = this.closest('[id^="rec"]')?.id || null;
-    if (typeof window.trackAction === 'function') {
-      window.trackAction('click_cta_top', { text: 'ПОЛУЧИТЬ ДОСТУП', rec });
-    } else {
-      console.warn('[tracker] trackAction not ready');
+    try {
+      console.log("[track] Отправка запроса на /track/action...");
+      fetch("/track/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          visitId: window.visitId || null,
+          sessionId: window.sessionId || null,
+          action: "click_cta_top",
+          ts: Date.now()
+        })
+      })
+        .then(res => {
+          console.log("[track] Ответ получен, статус:", res.status);
+          return res.text();
+        })
+        .then(body => {
+          console.log("[track] Тело ответа:", body);
+        })
+        .catch(err => {
+          console.error("[track] Ошибка при запросе:", err);
+        });
+    } catch (e) {
+      console.error("[track] Исключение в обработчике клика:", e);
     }
   });
 });
