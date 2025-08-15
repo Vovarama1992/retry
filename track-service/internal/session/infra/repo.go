@@ -25,19 +25,25 @@ func NewSessionRepo(db *sql.DB, breaker *gobreaker.CircuitBreaker) ports.Session
 
 func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, offset int) (map[string][]domain.Action, error) {
 	res, err := r.breaker.Execute(func() (any, error) {
-		// Получаем список session_id (только непустые) с пагинацией
+		// Берём только валидные сессии, группируем, сортируем по последнему событию (end_time) и пагинируем ТОЛЬКО группы
 		sessionsRows, err := r.db.QueryContext(ctx, `
-			SELECT session_id
-			FROM (
-				SELECT DISTINCT session_id
+			WITH grouped AS (
+				SELECT
+					session_id,
+					MIN(timestamp) AS start_time,
+					MAX(timestamp) AS end_time,
+					COUNT(*)       AS action_count
 				FROM actions
 				WHERE session_id IS NOT NULL AND session_id <> ''
-			) AS s
-			ORDER BY session_id
+				GROUP BY session_id
+			)
+			SELECT session_id
+			FROM grouped
+			ORDER BY end_time DESC, session_id
 			LIMIT $1 OFFSET $2
 		`, limit, offset)
 		if err != nil {
-			return nil, apperror.Internal("failed to query session ids")
+			return nil, apperror.Internal("failed to query grouped session ids")
 		}
 		defer sessionsRows.Close()
 
@@ -53,7 +59,7 @@ func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, o
 			return nil, apperror.NotFound("no actions found")
 		}
 
-		// Получаем действия для выбранных session_id
+		// Тянем экшны только выбранных групп
 		rows, err := r.db.QueryContext(ctx, `
 			SELECT id, action_type_id, visit_id, session_id, source, ip_address, timestamp, meta
 			FROM actions
@@ -61,7 +67,7 @@ func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, o
 			ORDER BY session_id, timestamp, id
 		`, pq.Array(sessionIDs))
 		if err != nil {
-			return nil, apperror.Internal("failed to query actions")
+			return nil, apperror.Internal("failed to query actions for selected sessions")
 		}
 		defer rows.Close()
 
