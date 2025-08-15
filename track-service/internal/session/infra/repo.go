@@ -25,7 +25,7 @@ func NewSessionRepo(db *sql.DB, breaker *gobreaker.CircuitBreaker) ports.Session
 
 func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, offset int) (map[string][]domain.Action, error) {
 	res, err := r.breaker.Execute(func() (any, error) {
-		// 1) Группируем только валидные сессии и пагинируем по группам (по end_time DESC)
+		// 1) Сначала группируем только валидные сессии и пагинируем по группам (самые «свежие» сверху)
 		sessionsRows, err := r.db.QueryContext(ctx, `
 			WITH grouped AS (
 				SELECT
@@ -36,14 +36,11 @@ func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, o
 				FROM actions
 				WHERE session_id IS NOT NULL AND session_id <> ''
 				GROUP BY session_id
-			),
-			page AS (
-				SELECT session_id
-				FROM grouped
-				ORDER BY end_time DESC, session_id
-				LIMIT $1 OFFSET $2
 			)
-			SELECT session_id FROM page
+			SELECT session_id
+			FROM grouped
+			ORDER BY end_time DESC, session_id
+			LIMIT $1 OFFSET $2
 		`, limit, offset)
 		if err != nil {
 			return nil, apperror.Internal("failed to query grouped session ids")
@@ -58,11 +55,16 @@ func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, o
 			}
 			sessionIDs = append(sessionIDs, id)
 		}
+		if err := sessionsRows.Err(); err != nil {
+			return nil, apperror.Internal("failed to read grouped session ids")
+		}
 		if len(sessionIDs) == 0 {
 			return nil, apperror.NotFound("no actions found")
 		}
 
-		// 2) Тянем экшны только выбранных сессий. COALESCE для nullable строк.
+		// 2) Тянем экшны только выбранных сессий.
+		//    COALESCE для всех строковых nullable-полей: visit_id, source, ip_address.
+		//    meta коалесим в '{}'::jsonb, чтобы не ломать Scan в json.RawMessage.
 		rows, err := r.db.QueryContext(ctx, `
 			WITH selected AS (
 				SELECT UNNEST($1::text[]) AS session_id
@@ -70,12 +72,12 @@ func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, o
 			SELECT
 				a.id,
 				a.action_type_id,
-				a.visit_id,
-				a.session_id,
-				COALESCE(a.source, '')     AS source,
-				COALESCE(a.ip_address, '') AS ip_address,
-				a.timestamp,
-				a.meta
+				COALESCE(a.visit_id, '')                    AS visit_id,
+				a.session_id,                               -- гарантированно не NULL по фильтру
+				COALESCE(a.source, '')                      AS source,
+				COALESCE(a.ip_address, '')                  AS ip_address,
+				a.timestamp,                                -- если вдруг nullable, можно COALESCE(a.timestamp, NOW())
+				COALESCE(a.meta, '{}'::jsonb)               AS meta
 			FROM actions a
 			JOIN selected s ON s.session_id = a.session_id
 			ORDER BY a.session_id, a.timestamp, a.id
@@ -85,7 +87,7 @@ func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, o
 		}
 		defer rows.Close()
 
-		result := make(map[string][]domain.Action)
+		result := make(map[string][]domain.Action, len(sessionIDs))
 		for rows.Next() {
 			var a domain.Action
 			if err := rows.Scan(
@@ -101,6 +103,13 @@ func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, o
 				return nil, apperror.Internal("failed to scan action row")
 			}
 			result[a.SessionID] = append(result[a.SessionID], a)
+		}
+		if err := rows.Err(); err != nil {
+			return nil, apperror.Internal("failed to read actions rows")
+		}
+		if len(result) == 0 {
+			// На всякий случай: группы выбрали, но действий не нашли (бывает при гонке) — отдадим 404
+			return nil, apperror.NotFound("no actions found")
 		}
 
 		return result, nil
