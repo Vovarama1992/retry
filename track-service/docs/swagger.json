@@ -16,6 +16,9 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "Actions"
+                ],
                 "summary": "Зафиксировать действие",
                 "parameters": [
                     {
@@ -58,6 +61,9 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "Actions"
+                ],
                 "summary": "Получить все действия",
                 "parameters": [
                     {
@@ -90,6 +96,9 @@
             "get": {
                 "produces": [
                     "application/json"
+                ],
+                "tags": [
+                    "Actions"
                 ],
                 "summary": "Получить действия, сгруппированные по visit_id",
                 "parameters": [
@@ -126,6 +135,9 @@
             "get": {
                 "produces": [
                     "application/json"
+                ],
+                "tags": [
+                    "Sessions"
                 ],
                 "summary": "Получить действия, сгруппированные по session_id",
                 "parameters": [
@@ -169,6 +181,9 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "Sessions"
+                ],
                 "summary": "Получить количество сессий на каждый visit_id",
                 "responses": {
                     "200": {
@@ -200,6 +215,9 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "Sessions"
+                ],
                 "summary": "Получить статистику по сессиям",
                 "responses": {
                     "200": {
@@ -227,6 +245,9 @@
             "get": {
                 "produces": [
                     "application/json"
+                ],
+                "tags": [
+                    "Visits"
                 ],
                 "summary": "Статистика по источникам визитов",
                 "responses": {
@@ -262,6 +283,9 @@
                 ],
                 "produces": [
                     "application/json"
+                ],
+                "tags": [
+                    "Visits"
                 ],
                 "summary": "Зафиксировать визит",
                 "parameters": [
@@ -311,6 +335,9 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "Visits"
+                ],
                 "summary": "Получить все визиты",
                 "parameters": [
                     {
@@ -358,8 +385,7 @@
                     "type": "string"
                 },
                 "id": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 },
                 "ipaddress": {
                     "type": "string"

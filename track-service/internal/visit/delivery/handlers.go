@@ -60,6 +60,7 @@ func writeError(w http.ResponseWriter, log logger.Logger, service, method string
 }
 
 // TrackVisit фиксирует визит.
+// @Tags Visits
 // @Summary Зафиксировать визит
 // @Description Создаёт новое действие типа "visit"
 // @Accept json
@@ -103,6 +104,7 @@ func (h *Handler) TrackVisit(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetAllVisits возвращает все визиты.
+// @Tags Visits
 // @Summary Получить все визиты
 // @Produce json
 // @Param offset query int false "Смещение выборки (offset)"
@@ -133,6 +135,7 @@ func (h *Handler) GetAllVisits(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetStatsBySource возвращает статистику по источникам.
+// @Tags Visits
 // @Summary Статистика по источникам визитов
 // @Produce json
 // @Success 200 {array} visit.VisitSourceStat

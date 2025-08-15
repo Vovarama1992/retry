@@ -45,6 +45,7 @@ func NewHandler(trackService track.Service, logger logger.Logger) *Handler {
 var validate = validator.New()
 
 // TrackAction фиксирует пользовательское действие.
+// @Tags Actions
 // @Summary Зафиксировать действие
 // @Accept json
 // @Produce json
@@ -96,6 +97,7 @@ func (h *Handler) TrackAction(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetAllActions возвращает все действия.
+// @Tags Actions
 // @Summary Получить все действия
 // @Produce json
 // @Param offset query int false "Смещение выборки (offset)"
@@ -133,6 +135,7 @@ func (h *Handler) GetAllActions(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetActionsGroupedByVisitID возвращает действия, сгруппированные по visit_id.
+// @Tags Actions
 // @Summary Получить действия, сгруппированные по visit_id
 // @Produce json
 // @Param offset query int false "Смещение выборки (offset)"

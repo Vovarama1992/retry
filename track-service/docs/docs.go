@@ -23,6 +23,9 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "Actions"
+                ],
                 "summary": "Зафиксировать действие",
                 "parameters": [
                     {
@@ -65,6 +68,9 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "Actions"
+                ],
                 "summary": "Получить все действия",
                 "parameters": [
                     {
@@ -97,6 +103,9 @@ const docTemplate = `{
             "get": {
                 "produces": [
                     "application/json"
+                ],
+                "tags": [
+                    "Actions"
                 ],
                 "summary": "Получить действия, сгруппированные по visit_id",
                 "parameters": [
@@ -133,6 +142,9 @@ const docTemplate = `{
             "get": {
                 "produces": [
                     "application/json"
+                ],
+                "tags": [
+                    "Sessions"
                 ],
                 "summary": "Получить действия, сгруппированные по session_id",
                 "parameters": [
@@ -176,6 +188,9 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "Sessions"
+                ],
                 "summary": "Получить количество сессий на каждый visit_id",
                 "responses": {
                     "200": {
@@ -207,6 +222,9 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "Sessions"
+                ],
                 "summary": "Получить статистику по сессиям",
                 "responses": {
                     "200": {
@@ -234,6 +252,9 @@ const docTemplate = `{
             "get": {
                 "produces": [
                     "application/json"
+                ],
+                "tags": [
+                    "Visits"
                 ],
                 "summary": "Статистика по источникам визитов",
                 "responses": {
@@ -269,6 +290,9 @@ const docTemplate = `{
                 ],
                 "produces": [
                     "application/json"
+                ],
+                "tags": [
+                    "Visits"
                 ],
                 "summary": "Зафиксировать визит",
                 "parameters": [
@@ -318,6 +342,9 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "Visits"
+                ],
                 "summary": "Получить все визиты",
                 "parameters": [
                     {
@@ -365,8 +392,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 },
                 "ipaddress": {
                     "type": "string"

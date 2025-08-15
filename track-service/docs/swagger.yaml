@@ -8,7 +8,6 @@ definitions:
         description: опционально, может быть пустым
         type: string
       id:
-        format: int64
         type: integer
       ipaddress:
         type: string
@@ -126,6 +125,8 @@ paths:
           schema:
             type: string
       summary: Зафиксировать действие
+      tags:
+      - Actions
   /track/action/all:
     get:
       parameters:
@@ -147,6 +148,8 @@ paths:
           schema:
             type: string
       summary: Получить все действия
+      tags:
+      - Actions
   /track/action/grouped:
     get:
       parameters:
@@ -170,6 +173,8 @@ paths:
           schema:
             type: string
       summary: Получить действия, сгруппированные по visit_id
+      tags:
+      - Actions
   /track/action/grouped-by-session:
     get:
       parameters:
@@ -197,6 +202,8 @@ paths:
           schema:
             type: string
       summary: Получить действия, сгруппированные по session_id
+      tags:
+      - Sessions
   /track/session/grouped-by-visit:
     get:
       produces:
@@ -217,6 +224,8 @@ paths:
           schema:
             type: string
       summary: Получить количество сессий на каждый visit_id
+      tags:
+      - Sessions
   /track/session/stats:
     get:
       produces:
@@ -235,6 +244,8 @@ paths:
           schema:
             type: string
       summary: Получить статистику по сессиям
+      tags:
+      - Sessions
   /track/stats/by-source:
     get:
       produces:
@@ -255,6 +266,8 @@ paths:
           schema:
             type: string
       summary: Статистика по источникам визитов
+      tags:
+      - Visits
   /track/visit:
     post:
       consumes:
@@ -289,6 +302,8 @@ paths:
           schema:
             type: string
       summary: Зафиксировать визит
+      tags:
+      - Visits
   /track/visit/all:
     get:
       parameters:
@@ -314,4 +329,6 @@ paths:
           schema:
             type: string
       summary: Получить все визиты
+      tags:
+      - Visits
 swagger: "2.0"

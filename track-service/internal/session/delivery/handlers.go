@@ -8,8 +8,11 @@ import (
 
 	"github.com/Vovarama1992/go-utils/logger"
 	"github.com/Vovarama1992/retry/pkg/apperror"
+	"github.com/Vovarama1992/retry/pkg/domain"
 	"github.com/Vovarama1992/retry/track-service/internal/session/ports"
 )
+
+var _ = domain.Action{}
 
 type Handler struct {
 	sessionService ports.SessionService
@@ -49,6 +52,7 @@ func writeError(w http.ResponseWriter, log logger.Logger, service, method string
 }
 
 // GetActionsGroupedBySessionID возвращает действия, сгруппированные по session_id.
+// @Tags Sessions
 // @Summary Получить действия, сгруппированные по session_id
 // @Produce json
 // @Param offset query int false "Смещение выборки (offset)"
@@ -79,6 +83,7 @@ func (h *Handler) GetActionsGroupedBySessionID(w http.ResponseWriter, r *http.Re
 }
 
 // GetSessionCountByVisitID возвращает количество сессий на каждый visit_id.
+// @Tags Sessions
 // @Summary Получить количество сессий на каждый visit_id
 // @Produce json
 // @Success 200 {object} map[string]int
@@ -101,6 +106,7 @@ func (h *Handler) GetSessionCountByVisitID(w http.ResponseWriter, r *http.Reques
 }
 
 // GetSessionStats возвращает агрегированную статистику по сессиям.
+// @Tags Sessions
 // @Summary Получить статистику по сессиям
 // @Produce json
 // @Success 200 {object} domain.SessionStats
