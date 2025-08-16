@@ -183,6 +183,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/track/action/grouped-by-session-readable": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Получить читабельную сводку по визитам (сессии и события внутри)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Смещение выборки (offset) по сессиям",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы (limit) по сессиям. По умолчанию из env TRACK_ACTIONS_GROUPED_BY_SESSION_LIMIT",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/github_com_Vovarama1992_retry_track-service_internal_domain.VisitBlock"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/track/session/grouped-by-visit": {
             "get": {
                 "produces": [
@@ -361,48 +415,6 @@ const docTemplate = `{
                             "type": "array",
                             "items": {
                                 "$ref": "#/definitions/domain.Action"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/track/visits": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Sessions"
-                ],
-                "summary": "Получить читабельную сводку по визитам (сессии и события внутри)",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Смещение выборки (offset)",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "$ref": "#/definitions/github_com_Vovarama1992_retry_track-service_internal_domain.VisitBlock"
                             }
                         }
                     },

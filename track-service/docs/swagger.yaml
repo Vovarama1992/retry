@@ -214,6 +214,41 @@ paths:
       summary: Получить действия, сгруппированные по session_id
       tags:
       - Sessions
+  /track/action/grouped-by-session-readable:
+    get:
+      parameters:
+      - description: Смещение выборки (offset) по сессиям
+        in: query
+        name: offset
+        type: integer
+      - description: Размер страницы (limit) по сессиям. По умолчанию из env TRACK_ACTIONS_GROUPED_BY_SESSION_LIMIT
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/github_com_Vovarama1992_retry_track-service_internal_domain.VisitBlock'
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Получить читабельную сводку по визитам (сессии и события внутри)
+      tags:
+      - Sessions
   /track/session/grouped-by-visit:
     get:
       produces:
@@ -341,31 +376,4 @@ paths:
       summary: Получить все визиты
       tags:
       - Visits
-  /track/visits:
-    get:
-      parameters:
-      - description: Смещение выборки (offset)
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              $ref: '#/definitions/github_com_Vovarama1992_retry_track-service_internal_domain.VisitBlock'
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            type: string
-        "500":
-          description: Internal Server Error
-          schema:
-            type: string
-      summary: Получить читабельную сводку по визитам (сессии и события внутри)
-      tags:
-      - Sessions
 swagger: "2.0"

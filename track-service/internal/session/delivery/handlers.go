@@ -130,14 +130,15 @@ func (h *Handler) GetSessionStats(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(stats)
 }
 
-// GetVisitsSummary возвращает сводку: visit_id -> { ip, sessions: { session_id: []string } }.
+// GetVisitsSummary возвращает сводку: "visit_id [ip]" -> { sessions: { session_id: []string } }.
 // @Tags Sessions
 // @Summary Получить читабельную сводку по визитам (сессии и события внутри)
 // @Produce json
-// @Param offset query int false "Смещение выборки (offset)"
+// @Param offset query int false "Смещение выборки (offset) по сессиям"
+// @Param limit  query int false "Размер страницы (limit) по сессиям. По умолчанию из env TRACK_ACTIONS_GROUPED_BY_SESSION_LIMIT"
 // @Success 200 {object} map[string]summary.VisitBlock
-// @Failure 404,500 {string} string
-// @Router /track/visits [get]
+// @Failure 400,404,500 {string} string
+// @Router /track/action/grouped-by-session-readable [get]
 func (h *Handler) GetVisitsSummary(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -146,12 +147,25 @@ func (h *Handler) GetVisitsSummary(w http.ResponseWriter, r *http.Request) {
 
 	offset := 0
 	if v := r.URL.Query().Get("offset"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
-			offset = n
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			writeError(w, h.logger, "session", "GetVisitsSummary", apperror.BadRequest("invalid offset"))
+			return
 		}
+		offset = n
 	}
 
-	data, err := h.sessionService.GetVisitsSummary(r.Context(), h.limitGrouped, offset)
+	limit := h.limitGrouped
+	if v := r.URL.Query().Get("limit"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			writeError(w, h.logger, "session", "GetVisitsSummary", apperror.BadRequest("invalid limit"))
+			return
+		}
+		limit = n
+	}
+
+	data, err := h.sessionService.GetVisitsSummary(r.Context(), limit, offset)
 	if err != nil {
 		writeError(w, h.logger, "session", "GetVisitsSummary", err)
 		return
