@@ -378,6 +378,48 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/track/visits": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Получить читабельную сводку по визитам (сессии и события внутри)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Смещение выборки (offset)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/github_com_Vovarama1992_retry_track-service_internal_domain.VisitBlock"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -392,7 +434,8 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "format": "int64"
                 },
                 "ipaddress": {
                     "type": "string"
@@ -444,6 +487,20 @@ const docTemplate = `{
                 },
                 "total_sessions": {
                     "type": "integer"
+                }
+            }
+        },
+        "github_com_Vovarama1992_retry_track-service_internal_domain.VisitBlock": {
+            "type": "object",
+            "properties": {
+                "sessions": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
                 }
             }
         },

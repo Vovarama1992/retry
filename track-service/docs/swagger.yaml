@@ -8,6 +8,7 @@ definitions:
         description: опционально, может быть пустым
         type: string
       id:
+        format: int64
         type: integer
       ipaddress:
         type: string
@@ -43,6 +44,15 @@ definitions:
         type: integer
       total_sessions:
         type: integer
+    type: object
+  github_com_Vovarama1992_retry_track-service_internal_domain.VisitBlock:
+    properties:
+      sessions:
+        additionalProperties:
+          items:
+            type: string
+          type: array
+        type: object
     type: object
   github_com_Vovarama1992_retry_track-service_internal_visit_models.VisitSourceStat:
     properties:
@@ -331,4 +341,31 @@ paths:
       summary: Получить все визиты
       tags:
       - Visits
+  /track/visits:
+    get:
+      parameters:
+      - description: Смещение выборки (offset)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/github_com_Vovarama1992_retry_track-service_internal_domain.VisitBlock'
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Получить читабельную сводку по визитам (сессии и события внутри)
+      tags:
+      - Sessions
 swagger: "2.0"
