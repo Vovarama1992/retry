@@ -2,7 +2,10 @@ package service
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 
+	"github.com/Vovarama1992/retry/pkg/apperror"
 	"github.com/Vovarama1992/retry/pkg/domain"
 	"github.com/Vovarama1992/retry/track-service/internal/ports"
 	visit "github.com/Vovarama1992/retry/track-service/internal/visit/models"
@@ -24,9 +27,17 @@ func NewTrackService(actionRepo ports.ActionRepo, visitService visit_ports.Visit
 func (s *trackService) TrackAction(ctx context.Context, actionTypeName string, action domain.Action) (int64, error) {
 	typeID, err := s.actionRepo.GetActionTypeIDByName(ctx, actionTypeName)
 	if err != nil {
-		return 0, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, apperror.BadRequest("unknown action type: " + actionTypeName)
+		}
+		return 0, apperror.Internal("failed to get action type: " + err.Error())
 	}
-	return s.actionRepo.CreateAction(ctx, typeID, action)
+
+	id, err := s.actionRepo.CreateAction(ctx, typeID, action)
+	if err != nil {
+		return 0, apperror.Internal("failed to create action: " + err.Error())
+	}
+	return id, nil
 }
 
 func (s *trackService) GetAllActions(ctx context.Context, limit, offset int) ([]domain.Action, error) {

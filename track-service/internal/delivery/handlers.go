@@ -2,11 +2,13 @@ package actionhttp
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 	"strconv"
 
 	"github.com/Vovarama1992/go-utils/logger"
+	"github.com/Vovarama1992/retry/pkg/apperror"
 	"github.com/Vovarama1992/retry/pkg/domain"
 	track "github.com/Vovarama1992/retry/track-service/internal/ports"
 	validator "github.com/go-playground/validator/v10"
@@ -82,6 +84,27 @@ func (h *Handler) TrackAction(w http.ResponseWriter, r *http.Request) {
 
 	_, err := h.trackService.TrackAction(r.Context(), req.Type, action)
 	if err != nil {
+		var appErr *apperror.AppError
+		if errors.As(err, &appErr) {
+			// логируем как warning, если это не 500
+			level := "error"
+			if appErr.Code < 500 {
+				level = "warn"
+			}
+
+			h.logger.Log(logger.LogEntry{
+				Level:   level,
+				Message: appErr.Message,
+				Error:   err,
+				Service: "track",
+				Method:  "TrackAction",
+			})
+
+			http.Error(w, appErr.Message, appErr.Code)
+			return
+		}
+
+		// fallback: не AppError → значит что-то совсем странное
 		h.logger.Log(logger.LogEntry{
 			Level:   "error",
 			Message: err.Error(),

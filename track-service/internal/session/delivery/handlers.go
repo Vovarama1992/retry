@@ -9,10 +9,12 @@ import (
 	"github.com/Vovarama1992/go-utils/logger"
 	"github.com/Vovarama1992/retry/pkg/apperror"
 	"github.com/Vovarama1992/retry/pkg/domain"
+	summary "github.com/Vovarama1992/retry/track-service/internal/domain"
 	"github.com/Vovarama1992/retry/track-service/internal/session/ports"
 )
 
 var _ = domain.Action{}
+var _ = summary.VisitBlock{}
 
 type Handler struct {
 	sessionService ports.SessionService
@@ -126,4 +128,35 @@ func (h *Handler) GetSessionStats(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(stats)
+}
+
+// GetVisitsSummary возвращает сводку: visit_id -> { ip, sessions: { session_id: []string } }.
+// @Tags Sessions
+// @Summary Получить читабельную сводку по визитам (сессии и события внутри)
+// @Produce json
+// @Param offset query int false "Смещение выборки (offset)"
+// @Success 200 {object} map[string]summary.VisitBlock
+// @Failure 404,500 {string} string
+// @Router /track/visits [get]
+func (h *Handler) GetVisitsSummary(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	offset := 0
+	if v := r.URL.Query().Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			offset = n
+		}
+	}
+
+	data, err := h.sessionService.GetVisitsSummary(r.Context(), h.limitGrouped, offset)
+	if err != nil {
+		writeError(w, h.logger, "session", "GetVisitsSummary", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(data)
 }
