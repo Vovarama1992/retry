@@ -18,18 +18,19 @@ func NewSessionService(repo ports.SessionRepo) ports.SessionService {
 	return &sessionService{repo: repo}
 }
 
-func (s *sessionService) GetActionsGroupedBySessionID(ctx context.Context, limit, offset int) (map[string][]domain.Action, error) {
+func (s *sessionService) GetActionsGroupedBySessionID(ctx context.Context, limit, offset int) ([]string, map[string][]domain.Action, error) {
 	return s.repo.GetActionsGroupedBySessionID(ctx, limit, offset)
 }
 
-func (s *sessionService) GetVisitsSummary(ctx context.Context, limit, offset int) (map[string]summary.VisitBlock, error) {
-	bySession, err := s.repo.GetActionsGroupedBySessionID(ctx, limit, offset)
+func (s *sessionService) GetVisitsSummary(ctx context.Context, limit, offset int) ([]string, map[string]summary.VisitBlock, error) {
+	sessionIDs, bySession, err := s.repo.GetActionsGroupedBySessionID(ctx, limit, offset)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	out := make(map[string]summary.VisitBlock)
-	for sessID, actions := range bySession {
+	for _, sessID := range sessionIDs { // порядок сохраняем
+		actions := bySession[sessID]
 		for _, a := range actions {
 			key := a.VisitID
 			if a.IPAddress != "" {
@@ -44,7 +45,7 @@ func (s *sessionService) GetVisitsSummary(ctx context.Context, limit, offset int
 			out[key] = vb
 		}
 	}
-	return out, nil
+	return sessionIDs, out, nil
 }
 
 func (s *sessionService) GetSessionCountByVisitID(ctx context.Context) (map[string]int, error) {

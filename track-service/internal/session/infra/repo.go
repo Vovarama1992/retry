@@ -23,7 +23,7 @@ func NewSessionRepo(db *sql.DB, breaker *gobreaker.CircuitBreaker) ports.Session
 	}
 }
 
-func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, offset int) (map[string][]domain.Action, error) {
+func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, offset int) ([]string, map[string][]domain.Action, error) {
 	res, err := r.breaker.Execute(func() (any, error) {
 		// 1) Сгруппированные валидные сессии, пагинация по группам (последние активные сверху)
 		sessionsRows, err := r.db.QueryContext(ctx, `
@@ -70,7 +70,7 @@ func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, o
 				a.action_type_id,
 				COALESCE(at.name, '')                 AS action_type_name,
 				COALESCE(a.visit_id, '')              AS visit_id,
-				a.session_id,                         -- гарантировано не NULL
+				a.session_id,
 				COALESCE(a.source, '')                AS source,
 				COALESCE(a.ip_address, '')            AS ip_address,
 				a.timestamp,
@@ -91,7 +91,7 @@ func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, o
 			if err := rows.Scan(
 				&a.ID,
 				&a.ActionTypeID,
-				&a.ActionTypeName, // ВАЖНО: третьей колонкой, как в SELECT
+				&a.ActionTypeName,
 				&a.VisitID,
 				&a.SessionID,
 				&a.Source,
@@ -109,12 +109,19 @@ func (r *sessionRepo) GetActionsGroupedBySessionID(ctx context.Context, limit, o
 		if len(result) == 0 {
 			return nil, apperror.NotFound("no actions found")
 		}
-		return result, nil
+		return struct {
+			IDs    []string
+			Result map[string][]domain.Action
+		}{sessionIDs, result}, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return res.(map[string][]domain.Action), nil
+	out := res.(struct {
+		IDs    []string
+		Result map[string][]domain.Action
+	})
+	return out.IDs, out.Result, nil
 }
 
 func (r *sessionRepo) GetSessionCountByVisitID(ctx context.Context) (map[string]int, error) {

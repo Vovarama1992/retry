@@ -58,7 +58,7 @@ func writeError(w http.ResponseWriter, log logger.Logger, service, method string
 // @Summary Получить действия, сгруппированные по session_id
 // @Produce json
 // @Param offset query int false "Смещение выборки (offset)"
-// @Success 200 {object} map[string][]domain.Action
+// @Success 200 {array} struct{session_id string; actions []domain.Action}
 // @Failure 404,500 {string} string
 // @Router /track/action/grouped-by-session [get]
 func (h *Handler) GetActionsGroupedBySessionID(w http.ResponseWriter, r *http.Request) {
@@ -74,14 +74,30 @@ func (h *Handler) GetActionsGroupedBySessionID(w http.ResponseWriter, r *http.Re
 		}
 	}
 
-	grouped, err := h.sessionService.GetActionsGroupedBySessionID(r.Context(), h.limitGrouped, offset)
+	sessionIDs, grouped, err := h.sessionService.GetActionsGroupedBySessionID(r.Context(), h.limitGrouped, offset)
 	if err != nil {
 		writeError(w, h.logger, "session", "GetActionsGroupedBySessionID", err)
 		return
 	}
 
+	// Собираем список в порядке sessionIDs
+	out := make([]struct {
+		SessionID string          `json:"session_id"`
+		Actions   []domain.Action `json:"actions"`
+	}, 0, len(sessionIDs))
+
+	for _, id := range sessionIDs {
+		out = append(out, struct {
+			SessionID string          `json:"session_id"`
+			Actions   []domain.Action `json:"actions"`
+		}{
+			SessionID: id,
+			Actions:   grouped[id],
+		})
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(grouped)
+	_ = json.NewEncoder(w).Encode(out)
 }
 
 // GetSessionCountByVisitID возвращает количество сессий на каждый visit_id.
@@ -165,12 +181,21 @@ func (h *Handler) GetVisitsSummary(w http.ResponseWriter, r *http.Request) {
 		limit = n
 	}
 
-	data, err := h.sessionService.GetVisitsSummary(r.Context(), limit, offset)
+	sessionIDs, data, err := h.sessionService.GetVisitsSummary(r.Context(), limit, offset)
 	if err != nil {
 		writeError(w, h.logger, "session", "GetVisitsSummary", err)
 		return
 	}
 
+	// Чтобы не потерять порядок сессий, отдадим его рядом.
+	resp := struct {
+		SessionIDs []string                      `json:"session_ids"`
+		Visits     map[string]summary.VisitBlock `json:"visits"`
+	}{
+		SessionIDs: sessionIDs,
+		Visits:     data,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(data)
+	_ = json.NewEncoder(w).Encode(resp)
 }

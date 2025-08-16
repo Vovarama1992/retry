@@ -9,7 +9,7 @@ import (
 // SessionRepo описывает работу с сессиями на уровне хранилища.
 type SessionRepo interface {
 	// GetActionsGroupedBySessionID возвращает map[session_id][]Action (с пагинацией по session_id)
-	GetActionsGroupedBySessionID(ctx context.Context, limit, offset int) (map[string][]domain.Action, error)
+	GetActionsGroupedBySessionID(ctx context.Context, limit, offset int) ([]string, map[string][]domain.Action, error)
 
 	// GetSessionCountByVisitID возвращает map[visit_id] -> count уникальных session_id
 	GetSessionCountByVisitID(ctx context.Context) (map[string]int, error)
