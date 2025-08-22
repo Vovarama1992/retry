@@ -46,6 +46,7 @@ services:
       - "443:443"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./front-dist:/usr/share/nginx/html:ro   # билд фронта
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - track

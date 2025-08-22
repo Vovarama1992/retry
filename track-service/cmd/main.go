@@ -69,7 +69,11 @@ func main() {
 	// router
 	r := chi.NewRouter()
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"https://retry.school"},
+		AllowedOrigins: []string{
+			"https://retry.school",
+			"https://crm.retry.school",
+			"http://localhost:5173",
+		},
 		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
