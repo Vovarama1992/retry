@@ -16,4 +16,6 @@ type SessionRepo interface {
 
 	// GetSessionStats возвращает агрегаты по сессиям
 	GetSessionStats(ctx context.Context) (domain.SessionStats, error)
+
+	GetActionsGroupedByVisitID(ctx context.Context, limit, offset int) ([]string, map[string][]domain.Action, error)
 }

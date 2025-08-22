@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/Vovarama1992/retry/pkg/domain"
 	summary "github.com/Vovarama1992/retry/track-service/internal/domain"
@@ -23,29 +24,37 @@ func (s *sessionService) GetActionsGroupedBySessionID(ctx context.Context, limit
 }
 
 func (s *sessionService) GetVisitsSummary(ctx context.Context, limit, offset int) ([]string, map[string]summary.VisitBlock, error) {
-	sessionIDs, bySession, err := s.repo.GetActionsGroupedBySessionID(ctx, limit, offset)
+	// тянем визиты с экшнами
+	visitIDs, byVisit, err := s.repo.GetActionsGroupedByVisitID(ctx, limit, offset)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	out := make(map[string]summary.VisitBlock)
-	for _, sessID := range sessionIDs { // порядок сохраняем
-		actions := bySession[sessID]
+
+	for _, vID := range visitIDs {
+		actions := byVisit[vID]
+		vb := summary.VisitBlock{Sessions: make(map[string][]string)}
+
+		var last time.Time
 		for _, a := range actions {
-			key := a.VisitID
-			if a.IPAddress != "" {
-				key = fmt.Sprintf("%s [%s]", a.VisitID, a.IPAddress)
-			}
-			vb := out[key]
-			if vb.Sessions == nil {
-				vb.Sessions = make(map[string][]string)
-			}
 			line := utils.HumanActionLine(a.Timestamp, a.ActionTypeName, a.Meta, nil)
-			vb.Sessions[sessID] = append(vb.Sessions[sessID], line)
-			out[key] = vb
+			vb.Sessions[a.SessionID] = append(vb.Sessions[a.SessionID], line)
+
+			if a.Timestamp.After(last) {
+				last = a.Timestamp
+			}
 		}
+
+		vb.LastActionAt = last
+		key := vID
+		if len(actions) > 0 && actions[0].IPAddress != "" {
+			key = fmt.Sprintf("%s [%s]", vID, actions[0].IPAddress)
+		}
+		out[key] = vb
 	}
-	return sessionIDs, out, nil
+
+	return visitIDs, out, nil
 }
 
 func (s *sessionService) GetSessionCountByVisitID(ctx context.Context) (map[string]int, error) {

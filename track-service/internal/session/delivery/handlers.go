@@ -13,9 +13,6 @@ import (
 	"github.com/Vovarama1992/retry/track-service/internal/session/ports"
 )
 
-var _ = domain.Action{}
-var _ = summary.VisitBlock{}
-
 type Handler struct {
 	sessionService ports.SessionService
 	logger         logger.Logger
@@ -146,15 +143,15 @@ func (h *Handler) GetSessionStats(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(stats)
 }
 
-// GetVisitsSummary возвращает сводку: "visit_id [ip]" -> { sessions: { session_id: []string } }.
-// @Tags Sessions
+// GetVisitsSummary возвращает сводку: "visit_id [ip]" -> { sessions: { session_id: []string }, last_action_at }
+// @Tags Visits
 // @Summary Получить читабельную сводку по визитам (сессии и события внутри)
 // @Produce json
-// @Param offset query int false "Смещение выборки (offset) по сессиям"
-// @Param limit  query int false "Размер страницы (limit) по сессиям. По умолчанию из env TRACK_ACTIONS_GROUPED_BY_SESSION_LIMIT"
-// @Success 200 {object} map[string]summary.VisitBlock
-// @Failure 400,404,500 {string} string
-// @Router /track/action/grouped-by-session-readable [get]
+// @Param offset query int false "Смещение выборки по визитам"
+// @Param limit  query int false "Размер страницы по визитам. По умолчанию из env TRACK_ACTIONS_GROUPED_BY_SESSION_LIMIT"
+// @Success 200 {object} summary.VisitsSummaryHTTPResponse
+// @Failure 400,500 {string} string
+// @Router /track/action/grouped-by-visit-readable [get] // <-- если меняешь путь
 func (h *Handler) GetVisitsSummary(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -165,7 +162,7 @@ func (h *Handler) GetVisitsSummary(w http.ResponseWriter, r *http.Request) {
 	if v := r.URL.Query().Get("offset"); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 0 {
-			writeError(w, h.logger, "session", "GetVisitsSummary", apperror.BadRequest("invalid offset"))
+			writeError(w, h.logger, "visit", "GetVisitsSummary", apperror.BadRequest("invalid offset"))
 			return
 		}
 		offset = n
@@ -175,25 +172,27 @@ func (h *Handler) GetVisitsSummary(w http.ResponseWriter, r *http.Request) {
 	if v := r.URL.Query().Get("limit"); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil || n <= 0 {
-			writeError(w, h.logger, "session", "GetVisitsSummary", apperror.BadRequest("invalid limit"))
+			writeError(w, h.logger, "visit", "GetVisitsSummary", apperror.BadRequest("invalid limit"))
 			return
 		}
 		limit = n
 	}
 
-	sessionIDs, data, err := h.sessionService.GetVisitsSummary(r.Context(), limit, offset)
+	visitIDs, data, err := h.sessionService.GetVisitsSummary(r.Context(), limit, offset)
 	if err != nil {
-		writeError(w, h.logger, "session", "GetVisitsSummary", err)
+		// если хочешь 200 с пустым ответом при отсутствии — раскомментируй блок ниже
+		// if apperror.IsNotFound(err) {
+		// 	w.Header().Set("Content-Type", "application/json")
+		// 	_ = json.NewEncoder(w).Encode(summary.VisitsSummaryHTTPResponse{VisitIDs: []string{}, Visits: map[string]summary.VisitBlock{}})
+		// 	return
+		// }
+		writeError(w, h.logger, "visit", "GetVisitsSummary", err)
 		return
 	}
 
-	// Чтобы не потерять порядок сессий, отдадим его рядом.
-	resp := struct {
-		SessionIDs []string                      `json:"session_ids"`
-		Visits     map[string]summary.VisitBlock `json:"visits"`
-	}{
-		SessionIDs: sessionIDs,
-		Visits:     data,
+	resp := summary.VisitsSummaryHTTPResponse{
+		VisitIDs: visitIDs,
+		Visits:   data,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
