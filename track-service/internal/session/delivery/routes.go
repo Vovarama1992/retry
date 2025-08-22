@@ -26,7 +26,7 @@ func RegisterRoutes(r chi.Router, handler *Handler) {
 	r.With(
 		withRecover,
 		withRateLimit(5, time.Minute),
-	).Get("/track/action/grouped-by-session-readable", handler.GetVisitsSummary)
+	).Get("/track/action/grouped-by-visit-readable", handler.GetVisitsSummary)
 
 	// GET /track/session/grouped-by-visit — кол-во сессий на каждый visit_id
 	r.With(
