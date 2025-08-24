@@ -214,19 +214,23 @@ FROM sessions
 func (r *sessionRepo) GetActionsGroupedByVisitID(ctx context.Context, limit, offset int) ([]string, map[string][]domain.Action, error) {
 	res, err := r.breaker.Execute(func() (any, error) {
 		// 1) Сгруппированные визиты (по последнему действию внутри визита)
-		visitsRows, err := r.db.QueryContext(ctx, `
-            WITH grouped AS (
-                SELECT visit_id,
-                       MAX(timestamp) AS last_time
-                FROM actions
-                WHERE visit_id IS NOT NULL AND visit_id <> ''
-                GROUP BY visit_id
-            )
-            SELECT visit_id
-            FROM grouped
-            ORDER BY last_time DESC, visit_id
-            LIMIT $1 OFFSET $2
-        `, limit, offset)
+		visitsRows, err := r.db.QueryContext(ctx,
+			`
+    WITH grouped AS (
+        SELECT visit_id,
+               MAX(timestamp) AS last_time
+        FROM actions
+        WHERE visit_id IS NOT NULL 
+          AND visit_id <> ''
+          AND session_id IS NOT NULL 
+          AND session_id <> ''
+        GROUP BY visit_id
+    )
+    SELECT visit_id
+    FROM grouped
+    ORDER BY last_time DESC, visit_id
+    LIMIT $1 OFFSET $2
+`, limit, offset)
 		if err != nil {
 			return nil, apperror.Internal("failed to query grouped visit ids")
 		}
@@ -249,21 +253,22 @@ func (r *sessionRepo) GetActionsGroupedByVisitID(ctx context.Context, limit, off
 
 		// 2) Экшны для выбранных визитов
 		rows, err := r.db.QueryContext(ctx, `
-            WITH selected AS (SELECT UNNEST($1::text[]) AS visit_id)
-            SELECT a.id,
-                   a.action_type_id,
-                   COALESCE(at.name, '') AS action_type_name,
-                   COALESCE(a.visit_id, '') AS visit_id,
-                   COALESCE(a.session_id, '') AS session_id,
-                   COALESCE(a.source, '') AS source,
-                   COALESCE(a.ip_address, '') AS ip_address,
-                   a.timestamp,
-                   COALESCE(a.meta, '{}'::jsonb) AS meta
-            FROM actions a
-            JOIN selected s ON s.visit_id = a.visit_id
-            LEFT JOIN action_types at ON at.id = a.action_type_id
-            ORDER BY a.visit_id, a.session_id, a.timestamp, a.id
-        `, pq.Array(visitIDs))
+    WITH selected AS (SELECT UNNEST($1::text[]) AS visit_id)
+    SELECT a.id,
+           a.action_type_id,
+           COALESCE(at.name, '') AS action_type_name,
+           COALESCE(a.visit_id, '') AS visit_id,
+           COALESCE(a.session_id, '') AS session_id,
+           COALESCE(a.source, '') AS source,
+           COALESCE(a.ip_address, '') AS ip_address,
+           a.timestamp,
+           COALESCE(a.meta, '{}'::jsonb) AS meta
+    FROM actions a
+    JOIN selected s ON s.visit_id = a.visit_id
+    LEFT JOIN action_types at ON at.id = a.action_type_id
+    WHERE a.session_id IS NOT NULL AND a.session_id <> ''
+    ORDER BY a.visit_id, a.session_id, a.timestamp, a.id
+`, pq.Array(visitIDs))
 		if err != nil {
 			return nil, apperror.Internal("failed to query actions for selected visits")
 		}
