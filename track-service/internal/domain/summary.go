@@ -9,7 +9,13 @@ type VisitsSummaryHTTPResponse struct {
 	Visits   map[string]VisitBlock `json:"visits"`
 }
 
+type SessionBlock struct {
+	SessionID    string    `json:"session_id"`
+	Actions      []string  `json:"actions"`
+	LastActionAt time.Time `json:"last_action_at"`
+}
+
 type VisitBlock struct {
-	Sessions     map[string][]string `json:"sessions"`
-	LastActionAt time.Time           `json:"last_action_at"`
+	Sessions     []SessionBlock `json:"sessions"`
+	LastActionAt time.Time      `json:"last_action_at"`
 }

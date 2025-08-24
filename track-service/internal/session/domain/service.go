@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/Vovarama1992/retry/pkg/domain"
@@ -30,28 +31,60 @@ func (s *sessionService) GetVisitsSummary(ctx context.Context, limit, offset int
 		return nil, nil, err
 	}
 
-	out := make(map[string]summary.VisitBlock)
+	out := make(map[string]summary.VisitBlock, len(visitIDs))
 
 	for _, vID := range visitIDs {
 		actions := byVisit[vID]
-		vb := summary.VisitBlock{Sessions: make(map[string][]string)}
+		if len(actions) == 0 {
+			continue
+		}
 
-		var last time.Time
+		// собираем временную мапу сессий
+		sessionsMap := make(map[string]*summary.SessionBlock, 8)
+		var visitLast time.Time
+
 		for _, a := range actions {
 			line := utils.HumanActionLine(a.Timestamp, a.ActionTypeName, a.Meta, nil)
-			vb.Sessions[a.SessionID] = append(vb.Sessions[a.SessionID], line)
 
-			if a.Timestamp.After(last) {
-				last = a.Timestamp
+			sb, ok := sessionsMap[a.SessionID]
+			if !ok {
+				sb = &summary.SessionBlock{
+					SessionID:    a.SessionID,
+					Actions:      make([]string, 0, 8),
+					LastActionAt: time.Time{},
+				}
+				sessionsMap[a.SessionID] = sb
+			}
+
+			sb.Actions = append(sb.Actions, line)
+			if a.Timestamp.After(sb.LastActionAt) {
+				sb.LastActionAt = a.Timestamp
+			}
+			if a.Timestamp.After(visitLast) {
+				visitLast = a.Timestamp
 			}
 		}
 
-		vb.LastActionAt = last
+		// превращаем мапу в срез
+		sessions := make([]summary.SessionBlock, 0, len(sessionsMap))
+		for _, sb := range sessionsMap {
+			sessions = append(sessions, *sb)
+		}
+
+		// сортировка по последнему действию (новые сверху)
+		sort.Slice(sessions, func(i, j int) bool {
+			return sessions[i].LastActionAt.After(sessions[j].LastActionAt)
+		})
+
 		key := vID
-		if len(actions) > 0 && actions[0].IPAddress != "" {
+		if actions[0].IPAddress != "" {
 			key = fmt.Sprintf("%s [%s]", vID, actions[0].IPAddress)
 		}
-		out[key] = vb
+
+		out[key] = summary.VisitBlock{
+			Sessions:     sessions,
+			LastActionAt: visitLast,
+		}
 	}
 
 	return visitIDs, out, nil
