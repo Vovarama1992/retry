@@ -8,6 +8,7 @@ import (
 
 	"github.com/Vovarama1992/retry/pkg/apperror"
 	"github.com/Vovarama1992/retry/pkg/domain"
+	"github.com/Vovarama1992/retry/track-service/internal/infra/utils"
 	"github.com/Vovarama1992/retry/track-service/internal/ports"
 	"github.com/sony/gobreaker"
 )
@@ -15,12 +16,14 @@ import (
 type actionRepo struct {
 	db      *sql.DB
 	breaker *gobreaker.CircuitBreaker
+	rules   []utils.ActionRule
 }
 
-func NewActionRepo(db *sql.DB, breaker *gobreaker.CircuitBreaker) ports.ActionRepo {
+func NewActionRepo(db *sql.DB, breaker *gobreaker.CircuitBreaker, rules []utils.ActionRule) ports.ActionRepo {
 	return &actionRepo{
 		db:      db,
 		breaker: breaker,
+		rules:   rules,
 	}
 }
 
@@ -39,6 +42,11 @@ func (r *actionRepo) GetActionTypeIDByName(ctx context.Context, name string) (in
 }
 
 func (r *actionRepo) CreateAction(ctx context.Context, typeID int64, action domain.Action) (int64, error) {
+	for _, rule := range r.rules {
+		if rule.ShouldSkip(action) {
+			return 0, nil
+		}
+	}
 	var id int64
 	_, err := r.breaker.Execute(func() (any, error) {
 		err := r.db.QueryRowContext(ctx,

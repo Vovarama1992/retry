@@ -11,6 +11,7 @@ import (
 	actionhttp "github.com/Vovarama1992/retry/track-service/internal/delivery"
 	service "github.com/Vovarama1992/retry/track-service/internal/domain"
 	"github.com/Vovarama1992/retry/track-service/internal/infra/postgres"
+	"github.com/Vovarama1992/retry/track-service/internal/infra/utils"
 	sessionhttp "github.com/Vovarama1992/retry/track-service/internal/session/delivery"
 	sessiondomain "github.com/Vovarama1992/retry/track-service/internal/session/domain"
 	sessioninfra "github.com/Vovarama1992/retry/track-service/internal/session/infra"
@@ -52,7 +53,9 @@ func main() {
 	breaker := postgres.NewPgBreaker()
 
 	// repos
-	actionRepo := postgres.NewActionRepo(db, breaker)
+	actionRepo := postgres.NewActionRepo(db, breaker, []utils.ActionRule{
+		utils.MentorArtstationRule{},
+	})
 	visitRepo := visitinfra.NewVisitRepo(db, breaker)
 	sessionRepo := sessioninfra.NewSessionRepo(db, breaker)
 
