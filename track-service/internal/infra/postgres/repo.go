@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/lib/pq"
+	"go.uber.org/zap"
 
 	"github.com/Vovarama1992/retry/pkg/apperror"
 	"github.com/Vovarama1992/retry/pkg/domain"
@@ -17,13 +18,15 @@ type actionRepo struct {
 	db      *sql.DB
 	breaker *gobreaker.CircuitBreaker
 	rules   []utils.ActionRule
+	logger  *zap.Logger
 }
 
-func NewActionRepo(db *sql.DB, breaker *gobreaker.CircuitBreaker, rules []utils.ActionRule) ports.ActionRepo {
+func NewActionRepo(db *sql.DB, breaker *gobreaker.CircuitBreaker, rules []utils.ActionRule, logger *zap.Logger) ports.ActionRepo {
 	return &actionRepo{
 		db:      db,
 		breaker: breaker,
 		rules:   rules,
+		logger:  logger,
 	}
 }
 
@@ -44,9 +47,15 @@ func (r *actionRepo) GetActionTypeIDByName(ctx context.Context, name string) (in
 func (r *actionRepo) CreateAction(ctx context.Context, typeID int64, action domain.Action) (int64, error) {
 	for _, rule := range r.rules {
 		if rule.ShouldSkip(action) {
+			r.logger.Info("action skipped by rule",
+				zap.String("type", action.ActionTypeName),
+				zap.String("visit_id", action.VisitID),
+				zap.String("session_id", action.SessionID),
+			)
 			return 0, nil
 		}
 	}
+
 	var id int64
 	_, err := r.breaker.Execute(func() (any, error) {
 		err := r.db.QueryRowContext(ctx,

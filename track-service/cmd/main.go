@@ -55,7 +55,7 @@ func main() {
 	// repos
 	actionRepo := postgres.NewActionRepo(db, breaker, []utils.ActionRule{
 		utils.MentorArtstationRule{},
-	})
+	}, zapBase)
 	visitRepo := visitinfra.NewVisitRepo(db, breaker)
 	sessionRepo := sessioninfra.NewSessionRepo(db, breaker)
 

@@ -33,13 +33,15 @@ func (s *trackService) TrackAction(ctx context.Context, actionTypeName string, a
 		return 0, apperror.Internal("failed to get action type: " + err.Error())
 	}
 
+	// вот этот шаг нужен
+	action.ActionTypeName = actionTypeName
+
 	id, err := s.actionRepo.CreateAction(ctx, typeID, action)
 	if err != nil {
 		return 0, apperror.Internal("failed to create action: " + err.Error())
 	}
 	return id, nil
 }
-
 func (s *trackService) GetAllActions(ctx context.Context, limit, offset int) ([]domain.Action, error) {
 	return s.actionRepo.GetAllActions(ctx, limit, offset)
 }
