@@ -61,6 +61,9 @@ var HumanRules = map[string]HumanRule{
 	},
 
 	"external_link_raid": func(t string, m map[string]any) string {
+		if det, _ := m["details"].(string); det != "" {
+			return fmt.Sprintf("%s — %s", t, det)
+		}
 		lbl, _ := m["label"].(string)
 		if lbl == "" {
 			lbl = "Raid"
@@ -73,6 +76,9 @@ var HumanRules = map[string]HumanRule{
 	},
 
 	"external_link_raids": func(t string, m map[string]any) string {
+		if det, _ := m["details"].(string); det != "" {
+			return fmt.Sprintf("%s — %s", t, det)
+		}
 		lbl, _ := m["label"].(string)
 		if lbl == "" {
 			lbl = "Наши рейды"
@@ -85,6 +91,9 @@ var HumanRules = map[string]HumanRule{
 	},
 
 	"external_link_details": func(t string, m map[string]any) string {
+		if det, _ := m["details"].(string); det != "" {
+			return fmt.Sprintf("%s — %s", t, det)
+		}
 		lbl, _ := m["label"].(string)
 		if lbl == "" {
 			lbl = "Подробнее"
@@ -97,6 +106,9 @@ var HumanRules = map[string]HumanRule{
 	},
 
 	"external_link_mentor_page": func(t string, m map[string]any) string {
+		if det, _ := m["details"].(string); det != "" {
+			return fmt.Sprintf("%s — %s", t, det)
+		}
 		lbl, _ := m["label"].(string)
 		if lbl == "" {
 			lbl = "страница ментора"
@@ -109,6 +121,9 @@ var HumanRules = map[string]HumanRule{
 	},
 
 	"external_link_social": func(t string, m map[string]any) string {
+		if det, _ := m["details"].(string); det != "" {
+			return fmt.Sprintf("%s — %s", t, det)
+		}
 		lbl, _ := m["label"].(string)
 		if lbl == "" {
 			lbl = "соцссылка"
@@ -121,6 +136,9 @@ var HumanRules = map[string]HumanRule{
 	},
 
 	"faq_open_answer": func(t string, m map[string]any) string {
+		if det, _ := m["details"].(string); det != "" {
+			return fmt.Sprintf("%s — %s", t, det)
+		}
 		q, _ := m["question"].(string)
 		if q == "" {
 			return fmt.Sprintf("%s — открыл ответ в FAQ", t)

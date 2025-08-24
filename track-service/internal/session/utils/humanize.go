@@ -35,10 +35,10 @@ func HumanActionLine(ts time.Time, actionType string, metaRaw []byte, loc *time.
 
 	// 2. humanization
 	if humanRule, ok := HumanRules[actionType]; ok {
+		// пробрасываем details внутрь
 		return humanRule(t, map[string]any{
 			"details": details,
-			// плюс оригинальные поля из meta на всякий случай
-			"raw": m,
+			"raw":     m,
 		})
 	}
 
