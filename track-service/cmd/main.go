@@ -12,12 +12,19 @@ import (
 	service "github.com/Vovarama1992/retry/track-service/internal/domain"
 	"github.com/Vovarama1992/retry/track-service/internal/infra/postgres"
 	"github.com/Vovarama1992/retry/track-service/internal/infra/utils"
+
+	scenariohttp "github.com/Vovarama1992/retry/track-service/internal/scenario/delivery"
+	scenariodomain "github.com/Vovarama1992/retry/track-service/internal/scenario/domain"
+	scenarioinfra "github.com/Vovarama1992/retry/track-service/internal/scenario/infra"
+
 	sessionhttp "github.com/Vovarama1992/retry/track-service/internal/session/delivery"
 	sessiondomain "github.com/Vovarama1992/retry/track-service/internal/session/domain"
 	sessioninfra "github.com/Vovarama1992/retry/track-service/internal/session/infra"
+
 	visithttp "github.com/Vovarama1992/retry/track-service/internal/visit/delivery"
 	visitdomain "github.com/Vovarama1992/retry/track-service/internal/visit/domain"
 	visitinfra "github.com/Vovarama1992/retry/track-service/internal/visit/infra"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 
@@ -49,7 +56,6 @@ func main() {
 	// db + breaker
 	db := postgres.NewPgConn()
 	defer db.Close()
-
 	breaker := postgres.NewPgBreaker()
 
 	// repos
@@ -58,16 +64,19 @@ func main() {
 	}, zapBase)
 	visitRepo := visitinfra.NewVisitRepo(db, breaker)
 	sessionRepo := sessioninfra.NewSessionRepo(db, breaker)
+	scenarioRepo := scenarioinfra.NewScenarioRepo(db, breaker)
 
 	// services
 	visitService := visitdomain.NewVisitService(visitRepo)
 	sessionService := sessiondomain.NewSessionService(sessionRepo)
 	trackService := service.NewTrackService(actionRepo, visitService)
+	scenarioService := scenariodomain.NewScenarioService(scenarioRepo)
 
 	// delivery
 	visitHandler := visithttp.NewHandler(trackService, visitService, l)
 	actionHandler := actionhttp.NewHandler(trackService, l)
 	sessionHandler := sessionhttp.NewHandler(sessionService, l)
+	scenarioHandler := scenariohttp.NewHandler(scenarioService, l)
 
 	// router
 	r := chi.NewRouter()
@@ -88,11 +97,12 @@ func main() {
 	visithttp.RegisterRoutes(r, visitHandler)
 	actionhttp.RegisterRoutes(r, actionHandler)
 	sessionhttp.RegisterRoutes(r, sessionHandler)
+	scenariohttp.RegisterRoutes(r, scenarioHandler)
 
 	// ping
 	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("pong"))
+		_, _ = w.Write([]byte("pong"))
 	})
 
 	// swagger
