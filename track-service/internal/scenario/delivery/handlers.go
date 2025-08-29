@@ -8,8 +8,11 @@ import (
 
 	"github.com/Vovarama1992/go-utils/logger"
 	"github.com/Vovarama1992/retry/pkg/apperror"
+	models "github.com/Vovarama1992/retry/track-service/internal/scenario/models"
 	"github.com/Vovarama1992/retry/track-service/internal/scenario/ports"
 )
+
+var _ models.ScenarioGetAccessSummary
 
 type Handler struct {
 	scenarioService ports.ScenarioService

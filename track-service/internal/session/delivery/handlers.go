@@ -10,8 +10,11 @@ import (
 	"github.com/Vovarama1992/retry/pkg/apperror"
 	"github.com/Vovarama1992/retry/pkg/domain"
 	summary "github.com/Vovarama1992/retry/track-service/internal/domain"
+	"github.com/Vovarama1992/retry/track-service/internal/session/models"
 	"github.com/Vovarama1992/retry/track-service/internal/session/ports"
 )
+
+var _ models.SessionWithActions
 
 type Handler struct {
 	sessionService ports.SessionService
@@ -55,7 +58,7 @@ func writeError(w http.ResponseWriter, log logger.Logger, service, method string
 // @Summary Получить действия, сгруппированные по session_id
 // @Produce json
 // @Param offset query int false "Смещение выборки (offset)"
-// @Success 200 {array} struct{session_id string; actions []domain.Action}
+// @Success 200 {array} models.SessionWithActions
 // @Failure 404,500 {string} string
 // @Router /track/action/grouped-by-session [get]
 func (h *Handler) GetActionsGroupedBySessionID(w http.ResponseWriter, r *http.Request) {

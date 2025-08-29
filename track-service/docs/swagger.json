@@ -152,12 +152,9 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/domain.Action"
-                                }
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_Vovarama1992_retry_track-service_internal_session_models.SessionWithActions"
                             }
                         }
                     },
@@ -176,25 +173,25 @@
                 }
             }
         },
-        "/track/action/grouped-by-session-readable": {
+        "/track/action/grouped-by-visit-readable": {
             "get": {
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "Sessions"
+                    "Visits"
                 ],
                 "summary": "Получить читабельную сводку по визитам (сессии и события внутри)",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Смещение выборки (offset) по сессиям",
+                        "description": "Смещение выборки по визитам",
                         "name": "offset",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "description": "Размер страницы (limit) по сессиям. По умолчанию из env TRACK_ACTIONS_GROUPED_BY_SESSION_LIMIT",
+                        "description": "Размер страницы по визитам. По умолчанию из env TRACK_ACTIONS_GROUPED_BY_SESSION_LIMIT",
                         "name": "limit",
                         "in": "query"
                     }
@@ -203,10 +200,52 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "$ref": "#/definitions/github_com_Vovarama1992_retry_track-service_internal_domain.VisitBlock"
-                            }
+                            "$ref": "#/definitions/github_com_Vovarama1992_retry_track-service_internal_domain.VisitsSummaryHTTPResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/track/scenario/get-access": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scenarios"
+                ],
+                "summary": "Получить сценарий \"Получить доступ\"",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Смещение выборки (offset)",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер выборки (по умолчанию TRACK_SCENARIO_LIMIT)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Vovarama1992_retry_track-service_internal_scenario_models.ScenarioGetAccessSummary"
                         }
                     },
                     "400": {
@@ -495,17 +534,152 @@
                 }
             }
         },
+        "github_com_Vovarama1992_retry_track-service_internal_domain.SessionBlock": {
+            "type": "object",
+            "properties": {
+                "actions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "last_action_at": {
+                    "type": "string"
+                },
+                "session_id": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_Vovarama1992_retry_track-service_internal_domain.VisitBlock": {
             "type": "object",
             "properties": {
+                "last_action_at": {
+                    "type": "string"
+                },
                 "sessions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Vovarama1992_retry_track-service_internal_domain.SessionBlock"
+                    }
+                }
+            }
+        },
+        "github_com_Vovarama1992_retry_track-service_internal_domain.VisitsSummaryHTTPResponse": {
+            "type": "object",
+            "properties": {
+                "visit_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "visits": {
                     "type": "object",
                     "additionalProperties": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
+                        "$ref": "#/definitions/github_com_Vovarama1992_retry_track-service_internal_domain.VisitBlock"
                     }
+                }
+            }
+        },
+        "github_com_Vovarama1992_retry_track-service_internal_scenario_models.ScenarioGetAccessDetail": {
+            "type": "object",
+            "properties": {
+                "clicked_at": {
+                    "type": "string"
+                },
+                "session_index": {
+                    "type": "integer"
+                },
+                "visit_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Vovarama1992_retry_track-service_internal_scenario_models.ScenarioGetAccessSummary": {
+            "type": "object",
+            "properties": {
+                "conversion_from_all": {
+                    "description": "% от всех визитов",
+                    "type": "number"
+                },
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Vovarama1992_retry_track-service_internal_scenario_models.ScenarioGetAccessDetail"
+                    }
+                },
+                "proceed_to_payment": {
+                    "$ref": "#/definitions/github_com_Vovarama1992_retry_track-service_internal_scenario_models.ScenarioProceedToPaymentStats"
+                },
+                "session_index_distribution": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "total_visits": {
+                    "description": "всего визитов",
+                    "type": "integer"
+                },
+                "visits_with_click": {
+                    "description": "сколько визитов дошли до кнопки",
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_Vovarama1992_retry_track-service_internal_scenario_models.ScenarioProceedToPaymentDetail": {
+            "type": "object",
+            "properties": {
+                "clicked_at": {
+                    "type": "string"
+                },
+                "payment_method": {
+                    "type": "string"
+                },
+                "session_index": {
+                    "type": "integer"
+                },
+                "visit_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Vovarama1992_retry_track-service_internal_scenario_models.ScenarioProceedToPaymentStats": {
+            "type": "object",
+            "properties": {
+                "conversion_from_clicks": {
+                    "description": "% относительно \"получить доступ\"",
+                    "type": "number"
+                },
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Vovarama1992_retry_track-service_internal_scenario_models.ScenarioProceedToPaymentDetail"
+                    }
+                },
+                "payment_methods_distribution": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "visits_with_payment": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_Vovarama1992_retry_track-service_internal_session_models.SessionWithActions": {
+            "type": "object",
+            "properties": {
+                "actions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Action"
+                    }
+                },
+                "session_id": {
+                    "type": "string"
                 }
             }
         },

@@ -45,14 +45,103 @@ definitions:
       total_sessions:
         type: integer
     type: object
+  github_com_Vovarama1992_retry_track-service_internal_domain.SessionBlock:
+    properties:
+      actions:
+        items:
+          type: string
+        type: array
+      last_action_at:
+        type: string
+      session_id:
+        type: string
+    type: object
   github_com_Vovarama1992_retry_track-service_internal_domain.VisitBlock:
     properties:
+      last_action_at:
+        type: string
       sessions:
+        items:
+          $ref: '#/definitions/github_com_Vovarama1992_retry_track-service_internal_domain.SessionBlock'
+        type: array
+    type: object
+  github_com_Vovarama1992_retry_track-service_internal_domain.VisitsSummaryHTTPResponse:
+    properties:
+      visit_ids:
+        items:
+          type: string
+        type: array
+      visits:
         additionalProperties:
-          items:
-            type: string
-          type: array
+          $ref: '#/definitions/github_com_Vovarama1992_retry_track-service_internal_domain.VisitBlock'
         type: object
+    type: object
+  github_com_Vovarama1992_retry_track-service_internal_scenario_models.ScenarioGetAccessDetail:
+    properties:
+      clicked_at:
+        type: string
+      session_index:
+        type: integer
+      visit_id:
+        type: string
+    type: object
+  github_com_Vovarama1992_retry_track-service_internal_scenario_models.ScenarioGetAccessSummary:
+    properties:
+      conversion_from_all:
+        description: '% от всех визитов'
+        type: number
+      details:
+        items:
+          $ref: '#/definitions/github_com_Vovarama1992_retry_track-service_internal_scenario_models.ScenarioGetAccessDetail'
+        type: array
+      proceed_to_payment:
+        $ref: '#/definitions/github_com_Vovarama1992_retry_track-service_internal_scenario_models.ScenarioProceedToPaymentStats'
+      session_index_distribution:
+        additionalProperties:
+          type: integer
+        type: object
+      total_visits:
+        description: всего визитов
+        type: integer
+      visits_with_click:
+        description: сколько визитов дошли до кнопки
+        type: integer
+    type: object
+  github_com_Vovarama1992_retry_track-service_internal_scenario_models.ScenarioProceedToPaymentDetail:
+    properties:
+      clicked_at:
+        type: string
+      payment_method:
+        type: string
+      session_index:
+        type: integer
+      visit_id:
+        type: string
+    type: object
+  github_com_Vovarama1992_retry_track-service_internal_scenario_models.ScenarioProceedToPaymentStats:
+    properties:
+      conversion_from_clicks:
+        description: '% относительно "получить доступ"'
+        type: number
+      details:
+        items:
+          $ref: '#/definitions/github_com_Vovarama1992_retry_track-service_internal_scenario_models.ScenarioProceedToPaymentDetail'
+        type: array
+      payment_methods_distribution:
+        additionalProperties:
+          type: integer
+        type: object
+      visits_with_payment:
+        type: integer
+    type: object
+  github_com_Vovarama1992_retry_track-service_internal_session_models.SessionWithActions:
+    properties:
+      actions:
+        items:
+          $ref: '#/definitions/domain.Action'
+        type: array
+      session_id:
+        type: string
     type: object
   github_com_Vovarama1992_retry_track-service_internal_visit_models.VisitSourceStat:
     properties:
@@ -198,11 +287,9 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              items:
-                $ref: '#/definitions/domain.Action'
-              type: array
-            type: object
+            items:
+              $ref: '#/definitions/github_com_Vovarama1992_retry_track-service_internal_session_models.SessionWithActions'
+            type: array
         "404":
           description: Not Found
           schema:
@@ -214,14 +301,14 @@ paths:
       summary: Получить действия, сгруппированные по session_id
       tags:
       - Sessions
-  /track/action/grouped-by-session-readable:
+  /track/action/grouped-by-visit-readable:
     get:
       parameters:
-      - description: Смещение выборки (offset) по сессиям
+      - description: Смещение выборки по визитам
         in: query
         name: offset
         type: integer
-      - description: Размер страницы (limit) по сессиям. По умолчанию из env TRACK_ACTIONS_GROUPED_BY_SESSION_LIMIT
+      - description: Размер страницы по визитам. По умолчанию из env TRACK_ACTIONS_GROUPED_BY_SESSION_LIMIT
         in: query
         name: limit
         type: integer
@@ -231,9 +318,36 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              $ref: '#/definitions/github_com_Vovarama1992_retry_track-service_internal_domain.VisitBlock'
-            type: object
+            $ref: '#/definitions/github_com_Vovarama1992_retry_track-service_internal_domain.VisitsSummaryHTTPResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Получить читабельную сводку по визитам (сессии и события внутри)
+      tags:
+      - Visits
+  /track/scenario/get-access:
+    get:
+      parameters:
+      - description: Смещение выборки (offset)
+        in: query
+        name: offset
+        type: integer
+      - description: Размер выборки (по умолчанию TRACK_SCENARIO_LIMIT)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Vovarama1992_retry_track-service_internal_scenario_models.ScenarioGetAccessSummary'
         "400":
           description: Bad Request
           schema:
@@ -246,9 +360,9 @@ paths:
           description: Internal Server Error
           schema:
             type: string
-      summary: Получить читабельную сводку по визитам (сессии и события внутри)
+      summary: Получить сценарий "Получить доступ"
       tags:
-      - Sessions
+      - Scenarios
   /track/session/grouped-by-visit:
     get:
       produces:
