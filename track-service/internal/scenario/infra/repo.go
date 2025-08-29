@@ -20,9 +20,18 @@ func NewScenarioRepo(db *sql.DB, breaker *gobreaker.CircuitBreaker) ports.Scenar
 	return &scenarioRepo{db: db, breaker: breaker}
 }
 
-// Тянем визиты, где есть click_cta_bottom, с пагинацией
-func (r *scenarioRepo) GetClickAccessStats(ctx context.Context, limit, offset int) ([]string, map[string][]domain.Action, error) {
+func (r *scenarioRepo) GetClickAccessStats(ctx context.Context, limit, offset int) ([]string, map[string][]domain.Action, int, error) {
 	res, err := r.breaker.Execute(func() (any, error) {
+		// общее число визитов
+		var total int
+		if err := r.db.QueryRowContext(ctx, `
+			SELECT COUNT(DISTINCT visit_id)
+			FROM actions
+			WHERE visit_id IS NOT NULL AND visit_id <> ''
+		`).Scan(&total); err != nil {
+			return nil, apperror.Internal("failed to count total visits")
+		}
+
 		// 1) Визиты, где был click_cta_bottom
 		visitsRows, err := r.db.QueryContext(ctx, `
 			WITH grouped AS (
@@ -61,7 +70,7 @@ func (r *scenarioRepo) GetClickAccessStats(ctx context.Context, limit, offset in
 			return nil, apperror.NotFound("no scenario visits found")
 		}
 
-		// 2) Все действия внутри этих визитов (не только click_cta_bottom, но и proceed_to_payment и др.)
+		// 2) Все действия по этим визитам
 		rows, err := r.db.QueryContext(ctx, `
 			WITH selected AS (SELECT UNNEST($1::text[]) AS visit_id)
 			SELECT
@@ -106,22 +115,21 @@ func (r *scenarioRepo) GetClickAccessStats(ctx context.Context, limit, offset in
 		if err := rows.Err(); err != nil {
 			return nil, apperror.Internal("failed to read scenario actions rows")
 		}
-		if len(result) == 0 {
-			return nil, apperror.NotFound("no scenario actions found")
-		}
 
 		return struct {
 			IDs    []string
 			Result map[string][]domain.Action
-		}{visitIDs, result}, nil
+			Total  int
+		}{visitIDs, result, total}, nil
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, 0, err
 	}
 
 	out := res.(struct {
 		IDs    []string
 		Result map[string][]domain.Action
+		Total  int
 	})
-	return out.IDs, out.Result, nil
+	return out.IDs, out.Result, out.Total, nil
 }

@@ -20,13 +20,13 @@ func NewScenarioService(repo ports.ScenarioRepo) ports.ScenarioService {
 }
 
 func (s *scenarioService) GetScenarioGetAccess(ctx context.Context, limit, offset int) (models.ScenarioGetAccessSummary, error) {
-	visitIDs, byVisit, err := s.repo.GetClickAccessStats(ctx, limit, offset)
+	visitIDs, byVisit, totalVisits, err := s.repo.GetClickAccessStats(ctx, limit, offset)
 	if err != nil {
 		return models.ScenarioGetAccessSummary{}, err
 	}
 
 	summary := models.ScenarioGetAccessSummary{
-		TotalVisits:              len(visitIDs),
+		TotalVisits:              totalVisits,
 		SessionIndexDistribution: make(map[int]int),
 		ProceedToPayment: models.ScenarioProceedToPaymentStats{
 			PaymentMethodsDistribution: make(map[string]int),
@@ -72,7 +72,6 @@ func (s *scenarioService) GetScenarioGetAccess(ctx context.Context, limit, offse
 		for _, a := range actions {
 			if a.ActionTypeName == "click_proceed_to_payment" {
 				method := ""
-
 				if len(a.Meta) > 0 {
 					var metaMap map[string]any
 					if err := json.Unmarshal(a.Meta, &metaMap); err == nil {
