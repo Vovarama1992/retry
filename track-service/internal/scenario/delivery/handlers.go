@@ -86,7 +86,7 @@ func (h *Handler) GetScenarioGetAccess(w http.ResponseWriter, r *http.Request) {
 		limit = n
 	}
 
-	// since: опционально (?since=YYYY-MM-DD или RFC3339). По умолчанию 2025-08-28 UTC.
+	// since: ?since=YYYY-MM-DD или RFC3339; по умолчанию 2025-08-28 UTC
 	var since time.Time
 	if sv := r.URL.Query().Get("since"); sv != "" {
 		if t, err := time.Parse(time.RFC3339, sv); err == nil {

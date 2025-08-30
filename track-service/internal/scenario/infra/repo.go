@@ -35,11 +35,11 @@ func (r *scenarioRepo) GetClickAccessStats(ctx context.Context, limit, offset in
 			WITH grouped AS (
 				SELECT
 					visit_id,
-					MAX(timestamp) AS last_time
+					MAX(a.timestamp) AS last_time
 				FROM actions a
 				JOIN action_types t ON t.id = a.action_type_id
-				WHERE visit_id IS NOT NULL AND visit_id <> ''
-				  AND session_id IS NOT NULL AND session_id <> ''
+				WHERE a.visit_id IS NOT NULL AND a.visit_id <> ''
+				  AND a.session_id IS NOT NULL AND a.session_id <> ''
 				  AND t.name = 'click_cta_bottom'
 				GROUP BY visit_id
 			)

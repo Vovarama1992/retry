@@ -33,95 +33,118 @@ func (s *scenarioService) GetScenarioGetAccess(ctx context.Context, limit, offse
 		},
 	}
 
+	// для conversionFromClicks: визиты, где есть хотя бы один CTA >= since
+	visitsWithCtaSince := make(map[string]struct{})
 	var durations []float64
-	clicksSince := 0 // CTA после since — знаменатель для conversionFromClicks
 
 	for _, vID := range visitIDs {
 		actions := byVisit[vID]
 		if len(actions) == 0 {
 			continue
 		}
-
 		sort.Slice(actions, func(i, j int) bool { return actions[i].Timestamp.Before(actions[j].Timestamp) })
 
-		// первый CTA (за всю историю)
-		var ctaAt time.Time
-		var ctaSess string
+		// --- БЛОК 1: CTA all-time ---
+		var firstCtaSess string
+		var firstCtaAt time.Time
+		haveAnyCTA := false
+		eligibleSessions := make(map[string]bool) // session_id -> есть CTA >= since
+
 		for _, a := range actions {
-			if a.ActionTypeName == "click_cta_bottom" {
-				ctaAt = a.Timestamp
-				ctaSess = a.SessionID
-				break
+			if a.ActionTypeName != "click_cta_bottom" {
+				continue
+			}
+			if !haveAnyCTA {
+				firstCtaSess = a.SessionID
+				firstCtaAt = a.Timestamp
+				haveAnyCTA = true
+			}
+			if !a.Timestamp.Before(since) {
+				eligibleSessions[a.SessionID] = true
 			}
 		}
-		if ctaAt.IsZero() {
+		if !haveAnyCTA {
 			continue
 		}
 
-		// считаем CTA всегда (all-time)
+		// считаем CTA (за всю историю)
 		out.VisitsWithClick++
+		// деталь и распределение по индексу сессии — по первой сессии, где встретился CTA
+		sIdx := indexOfSession(actions, firstCtaSess)
 		out.Details = append(out.Details, models.ScenarioGetAccessDetail{
 			VisitID:      vID,
-			SessionIndex: indexOfSession(actions, ctaSess),
-			ClickedAt:    ctaAt,
+			SessionIndex: sIdx,
+			ClickedAt:    firstCtaAt,
 		})
-		out.SessionIndexDistribution[indexOfSession(actions, ctaSess)]++
+		out.SessionIndexDistribution[sIdx]++
 
-		// CTA после since?
-		ctaEligible := !ctaAt.Before(since)
-		if ctaEligible {
-			clicksSince++
+		// визит считается eligible для конверсии, если есть хотя бы ОДИН CTA >= since в ЛЮБОЙ сессии
+		if len(eligibleSessions) > 0 {
+			visitsWithCtaSince[vID] = struct{}{}
 		}
 
-		// оплаты считаем ТОЛЬКО если CTA ≥ since
-		if !ctaEligible {
-			continue
+		// --- БЛОК 2: Proceed только в сессиях, где есть CTA >= since ---
+		if len(eligibleSessions) == 0 {
+			continue // в этом визите ни одной сессии с CTA после since — ничего не считаем в proceed-блоке
 		}
 
-		for _, a := range actions {
-			if a.ActionTypeName != "click_proceed_to_payment" {
+		for _, p := range actions {
+			if p.ActionTypeName != "click_proceed_to_payment" {
+				continue
+			}
+			// учитываем только оплаты в сессиях, где есть CTA >= since
+			if !eligibleSessions[p.SessionID] {
 				continue
 			}
 
+			// метод оплаты
 			method := ""
-			if len(a.Meta) > 0 {
+			if len(p.Meta) > 0 {
 				var meta map[string]any
-				if err := json.Unmarshal(a.Meta, &meta); err == nil {
+				if err := json.Unmarshal(p.Meta, &meta); err == nil {
 					if v, ok := meta["name"].(string); ok {
 						method = v
 					}
 				}
 			}
 
+			// длительность: ищем CTA в этой сессии, который >= since и раньше оплаты; берём ближайший
+			if ctaAt, ok := nearestCtaAfterSinceBefore(actions, p.SessionID, p.Timestamp, since); ok {
+				dm := p.Timestamp.Sub(ctaAt).Minutes()
+				durations = append(durations, dm)
+
+				out.ProceedToPayment.Details = append(out.ProceedToPayment.Details, models.ScenarioProceedToPaymentDetail{
+					VisitID:         vID,
+					SessionIndex:    indexOfSession(actions, p.SessionID),
+					ClickedAt:       p.Timestamp, // время клика «Перейти к оплате»
+					PaymentMethod:   method,
+					DurationMinutes: &dm,
+				})
+			} else {
+				// CTA после since в этой сессии есть (по eligibleSessions), но ближнего до оплаты не нашли (редко, но оставим без длительности)
+				out.ProceedToPayment.Details = append(out.ProceedToPayment.Details, models.ScenarioProceedToPaymentDetail{
+					VisitID:       vID,
+					SessionIndex:  indexOfSession(actions, p.SessionID),
+					ClickedAt:     p.Timestamp,
+					PaymentMethod: method,
+				})
+			}
+
 			out.ProceedToPayment.VisitsWithPayment++
 			out.ProceedToPayment.PaymentMethodsDistribution[method]++
-
-			det := models.ScenarioProceedToPaymentDetail{
-				VisitID:       vID,
-				SessionIndex:  indexOfSession(actions, a.SessionID),
-				ClickedAt:     a.Timestamp, // время клика "Перейти к оплате"
-				PaymentMethod: method,
-			}
-			// длительность — только если та же сессия и после CTA
-			if a.SessionID == ctaSess && a.Timestamp.After(ctaAt) {
-				dm := a.Timestamp.Sub(ctaAt).Minutes()
-				det.DurationMinutes = &dm
-				durations = append(durations, dm)
-			}
-			out.ProceedToPayment.Details = append(out.ProceedToPayment.Details, det)
 		}
 	}
 
-	// конверсии
+	// Конверсии
 	if out.TotalVisits > 0 {
 		out.ConversionFromAll = float64(out.VisitsWithClick) / float64(out.TotalVisits) * 100
 	}
-	if clicksSince > 0 {
+	if denom := len(visitsWithCtaSince); denom > 0 {
 		out.ProceedToPayment.ConversionFromClicks =
-			float64(out.ProceedToPayment.VisitsWithPayment) / float64(clicksSince) * 100
+			float64(out.ProceedToPayment.VisitsWithPayment) / float64(denom) * 100
 	}
 
-	// среднее и медиана по длительностям
+	// Среднее и медиана по длительностям
 	if n := len(durations); n > 0 {
 		sort.Float64s(durations)
 		sum := 0.0
@@ -137,6 +160,25 @@ func (s *scenarioService) GetScenarioGetAccess(ctx context.Context, limit, offse
 	}
 
 	return out, nil
+}
+
+// Ближайший CTA в заданной сессии: >= since, <= payAt, с максимальным timestamp
+func nearestCtaAfterSinceBefore(actions []domain.Action, sessionID string, payAt time.Time, since time.Time) (time.Time, bool) {
+	var best time.Time
+	found := false
+	for _, a := range actions {
+		if a.ActionTypeName != "click_cta_bottom" || a.SessionID != sessionID {
+			continue
+		}
+		if a.Timestamp.Before(since) || a.Timestamp.After(payAt) {
+			continue
+		}
+		if !found || a.Timestamp.After(best) {
+			best = a.Timestamp
+			found = true
+		}
+	}
+	return best, found
 }
 
 // порядковый номер сессии внутри визита
