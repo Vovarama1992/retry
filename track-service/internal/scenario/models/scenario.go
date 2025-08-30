@@ -21,15 +21,21 @@ type ScenarioGetAccessDetail struct {
 
 // Вложенный сценарий: "Перейти к оплате"
 type ScenarioProceedToPaymentStats struct {
-	VisitsWithPayment          int                              `json:"visits_with_payment"`
-	ConversionFromClicks       float64                          `json:"conversion_from_clicks"` // % относительно "получить доступ"
-	PaymentMethodsDistribution map[string]int                   `json:"payment_methods_distribution"`
+	VisitsWithPayment          int                              `json:"visitsWithPayment"`
+	ConversionFromClicks       float64                          `json:"conversionFromClicks"`
+	PaymentMethodsDistribution map[string]int                   `json:"paymentMethodsDistribution"`
 	Details                    []ScenarioProceedToPaymentDetail `json:"details"`
+
+	AvgMinutes float64 `json:"avgMinutes"`
+	P50Minutes float64 `json:"p50Minutes"`
 }
 
 type ScenarioProceedToPaymentDetail struct {
-	VisitID       string    `json:"visit_id"`
-	SessionIndex  int       `json:"session_index"`
-	ClickedAt     time.Time `json:"clicked_at"`
-	PaymentMethod string    `json:"payment_method,omitempty"`
+	VisitID       string    `json:"visitId"`
+	SessionIndex  int       `json:"sessionIndex"`
+	ClickedAt     time.Time `json:"clickedAt"`
+	PaymentMethod string    `json:"paymentMethod"`
+
+	// если «оплата» была в той же сессии после CTA — разница в минутах
+	DurationMinutes *float64 `json:"durationMinutes,omitempty"`
 }

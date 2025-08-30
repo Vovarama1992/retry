@@ -3,6 +3,8 @@ package infra
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"time"
 
 	"github.com/Vovarama1992/retry/pkg/apperror"
 	"github.com/Vovarama1992/retry/pkg/domain"
@@ -20,9 +22,8 @@ func NewScenarioRepo(db *sql.DB, breaker *gobreaker.CircuitBreaker) ports.Scenar
 	return &scenarioRepo{db: db, breaker: breaker}
 }
 
-func (r *scenarioRepo) GetClickAccessStats(ctx context.Context, limit, offset int) ([]string, map[string][]domain.Action, int, error) {
+func (r *scenarioRepo) GetClickAccessStats(ctx context.Context, limit, offset int, since *time.Time) ([]string, map[string][]domain.Action, int, error) {
 	res, err := r.breaker.Execute(func() (any, error) {
-		// общее число визитов
 		var total int
 		if err := r.db.QueryRowContext(ctx, `
 			SELECT COUNT(DISTINCT visit_id)
@@ -32,8 +33,7 @@ func (r *scenarioRepo) GetClickAccessStats(ctx context.Context, limit, offset in
 			return nil, apperror.Internal("failed to count total visits")
 		}
 
-		// 1) Визиты, где был click_cta_bottom
-		visitsRows, err := r.db.QueryContext(ctx, `
+		base := `
 			WITH grouped AS (
 				SELECT
 					visit_id,
@@ -43,17 +43,33 @@ func (r *scenarioRepo) GetClickAccessStats(ctx context.Context, limit, offset in
 				WHERE visit_id IS NOT NULL AND visit_id <> ''
 				  AND session_id IS NOT NULL AND session_id <> ''
 				  AND t.name = 'click_cta_bottom'
+				  %s
 				GROUP BY visit_id
 			)
 			SELECT visit_id
 			FROM grouped
 			ORDER BY last_time DESC, visit_id
 			LIMIT $1 OFFSET $2
-		`, limit, offset)
-		if err != nil {
-			return nil, apperror.Internal("failed to query scenario visit ids")
+		`
+
+		var visitsRows *sql.Rows
+		if since != nil {
+			q := fmt.Sprintf(base, "AND timestamp >= $3")
+			var err error
+			visitsRows, err = r.db.QueryContext(ctx, q, limit, offset, *since)
+			if err != nil {
+				return nil, apperror.Internal("failed to query scenario visit ids")
+			}
+			defer visitsRows.Close()
+		} else {
+			q := fmt.Sprintf(base, "")
+			var err error
+			visitsRows, err = r.db.QueryContext(ctx, q, limit, offset)
+			if err != nil {
+				return nil, apperror.Internal("failed to query scenario visit ids")
+			}
+			defer visitsRows.Close()
 		}
-		defer visitsRows.Close()
 
 		var visitIDs []string
 		for visitsRows.Next() {
@@ -70,16 +86,15 @@ func (r *scenarioRepo) GetClickAccessStats(ctx context.Context, limit, offset in
 			return nil, apperror.NotFound("no scenario visits found")
 		}
 
-		// 2) Все действия по этим визитам
 		rows, err := r.db.QueryContext(ctx, `
 			WITH selected AS (SELECT UNNEST($1::text[]) AS visit_id)
 			SELECT
 				a.id,
 				a.action_type_id,
-				COALESCE(t.name, '')      AS action_type_name,
-				COALESCE(a.visit_id, '')  AS visit_id,
+				COALESCE(t.name, '')       AS action_type_name,
+				COALESCE(a.visit_id, '')   AS visit_id,
 				COALESCE(a.session_id, '') AS session_id,
-				COALESCE(a.source, '')    AS source,
+				COALESCE(a.source, '')     AS source,
 				COALESCE(a.ip_address, '') AS ip_address,
 				a.timestamp,
 				COALESCE(a.meta, '{}'::jsonb) AS meta
