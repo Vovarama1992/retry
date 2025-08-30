@@ -20,12 +20,12 @@ func NewScenarioService(repo ports.ScenarioRepo) ports.ScenarioService {
 }
 
 func (s *scenarioService) GetScenarioGetAccess(ctx context.Context, limit, offset int, since time.Time) (models.ScenarioGetAccessSummary, error) {
-	visitIDs, byVisit, totalVisits, err := s.repo.GetClickAccessStats(ctx, limit, offset, &since)
+	visitIDs, byVisit, totalVisits, err := s.repo.GetClickAccessStats(ctx, limit, offset)
 	if err != nil {
 		return models.ScenarioGetAccessSummary{}, err
 	}
 
-	summary := models.ScenarioGetAccessSummary{
+	out := models.ScenarioGetAccessSummary{
 		TotalVisits:              totalVisits,
 		SessionIndexDistribution: make(map[int]int),
 		ProceedToPayment: models.ScenarioProceedToPaymentStats{
@@ -34,6 +34,7 @@ func (s *scenarioService) GetScenarioGetAccess(ctx context.Context, limit, offse
 	}
 
 	var durations []float64
+	clicksSince := 0 // CTA после since — знаменатель для conversionFromClicks
 
 	for _, vID := range visitIDs {
 		actions := byVisit[vID]
@@ -41,34 +42,42 @@ func (s *scenarioService) GetScenarioGetAccess(ctx context.Context, limit, offse
 			continue
 		}
 
-		sort.Slice(actions, func(i, j int) bool {
-			return actions[i].Timestamp.Before(actions[j].Timestamp)
-		})
+		sort.Slice(actions, func(i, j int) bool { return actions[i].Timestamp.Before(actions[j].Timestamp) })
 
-		// первый CTA после since
-		var clickedAt time.Time
-		var sessionID string
+		// первый CTA (за всю историю)
+		var ctaAt time.Time
+		var ctaSess string
 		for _, a := range actions {
-			if a.ActionTypeName == "click_cta_bottom" && !a.Timestamp.Before(since) {
-				clickedAt = a.Timestamp
-				sessionID = a.SessionID
+			if a.ActionTypeName == "click_cta_bottom" {
+				ctaAt = a.Timestamp
+				ctaSess = a.SessionID
 				break
 			}
 		}
-		if clickedAt.IsZero() {
+		if ctaAt.IsZero() {
 			continue
 		}
 
-		summary.VisitsWithClick++
-		detail := models.ScenarioGetAccessDetail{
+		// считаем CTA всегда (all-time)
+		out.VisitsWithClick++
+		out.Details = append(out.Details, models.ScenarioGetAccessDetail{
 			VisitID:      vID,
-			SessionIndex: indexOfSession(actions, sessionID),
-			ClickedAt:    clickedAt,
-		}
-		summary.Details = append(summary.Details, detail)
-		summary.SessionIndexDistribution[detail.SessionIndex]++
+			SessionIndex: indexOfSession(actions, ctaSess),
+			ClickedAt:    ctaAt,
+		})
+		out.SessionIndexDistribution[indexOfSession(actions, ctaSess)]++
 
-		// вложенный сценарий «перейти к оплате»
+		// CTA после since?
+		ctaEligible := !ctaAt.Before(since)
+		if ctaEligible {
+			clicksSince++
+		}
+
+		// оплаты считаем ТОЛЬКО если CTA ≥ since
+		if !ctaEligible {
+			continue
+		}
+
 		for _, a := range actions {
 			if a.ActionTypeName != "click_proceed_to_payment" {
 				continue
@@ -76,63 +85,61 @@ func (s *scenarioService) GetScenarioGetAccess(ctx context.Context, limit, offse
 
 			method := ""
 			if len(a.Meta) > 0 {
-				var metaMap map[string]any
-				if err := json.Unmarshal(a.Meta, &metaMap); err == nil {
-					if v, ok := metaMap["name"].(string); ok {
+				var meta map[string]any
+				if err := json.Unmarshal(a.Meta, &meta); err == nil {
+					if v, ok := meta["name"].(string); ok {
 						method = v
 					}
 				}
 			}
 
-			summary.ProceedToPayment.VisitsWithPayment++
-			summary.ProceedToPayment.PaymentMethodsDistribution[method]++
+			out.ProceedToPayment.VisitsWithPayment++
+			out.ProceedToPayment.PaymentMethodsDistribution[method]++
 
 			det := models.ScenarioProceedToPaymentDetail{
 				VisitID:       vID,
 				SessionIndex:  indexOfSession(actions, a.SessionID),
-				ClickedAt:     a.Timestamp,
+				ClickedAt:     a.Timestamp, // время клика "Перейти к оплате"
 				PaymentMethod: method,
 			}
-
-			// длительность в рамках той же сессии, если после CTA
-			if a.SessionID == sessionID && a.Timestamp.After(clickedAt) {
-				dm := a.Timestamp.Sub(clickedAt).Minutes()
+			// длительность — только если та же сессия и после CTA
+			if a.SessionID == ctaSess && a.Timestamp.After(ctaAt) {
+				dm := a.Timestamp.Sub(ctaAt).Minutes()
 				det.DurationMinutes = &dm
 				durations = append(durations, dm)
 			}
-
-			summary.ProceedToPayment.Details = append(summary.ProceedToPayment.Details, det)
+			out.ProceedToPayment.Details = append(out.ProceedToPayment.Details, det)
 		}
 	}
 
-	if summary.TotalVisits > 0 {
-		summary.ConversionFromAll = float64(summary.VisitsWithClick) / float64(summary.TotalVisits) * 100
+	// конверсии
+	if out.TotalVisits > 0 {
+		out.ConversionFromAll = float64(out.VisitsWithClick) / float64(out.TotalVisits) * 100
 	}
-	if summary.VisitsWithClick > 0 {
-		summary.ProceedToPayment.ConversionFromClicks =
-			float64(summary.ProceedToPayment.VisitsWithPayment) / float64(summary.VisitsWithClick) * 100
+	if clicksSince > 0 {
+		out.ProceedToPayment.ConversionFromClicks =
+			float64(out.ProceedToPayment.VisitsWithPayment) / float64(clicksSince) * 100
 	}
 
-	// агрегаты по длительности: Avg и P50 (медиана)
+	// среднее и медиана по длительностям
 	if n := len(durations); n > 0 {
 		sort.Float64s(durations)
 		sum := 0.0
 		for _, v := range durations {
 			sum += v
 		}
-		summary.ProceedToPayment.AvgMinutes = sum / float64(n)
-		// p50 (медиана)
+		out.ProceedToPayment.AvgMinutes = sum / float64(n)
 		if n%2 == 1 {
-			summary.ProceedToPayment.P50Minutes = durations[n/2]
+			out.ProceedToPayment.P50Minutes = durations[n/2]
 		} else {
-			summary.ProceedToPayment.P50Minutes = (durations[n/2-1] + durations[n/2]) / 2
+			out.ProceedToPayment.P50Minutes = (durations[n/2-1] + durations[n/2]) / 2
 		}
 	}
 
-	return summary, nil
+	return out, nil
 }
 
-// indexOfSession — порядковый номер сессии внутри визита
+// порядковый номер сессии внутри визита
 func indexOfSession(actions []domain.Action, sessionID string) int {
 	if sessionID == "" {
 		return 0
