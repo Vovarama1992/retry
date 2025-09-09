@@ -3,7 +3,8 @@ set -e
 
 # Конфиг
 CONTAINER_NAME="retry-postgres"
-DUMPS_DIR="./dumps"
+BASE_DIR="/var/www/back"
+DUMPS_DIR="$BASE_DIR/dumps"
 DATE_STR=$(date +%F)
 FILENAME="${DUMPS_DIR}/dump_${DATE_STR}.sql"
 
