@@ -20,18 +20,18 @@ func RegisterRoutes(r chi.Router, handler *Handler) {
 	// POST /track/action — создать новое действие
 	r.With(
 		withRecover,
-		withRateLimit(300, time.Minute),
+		withRateLimit(3000, time.Minute),
 	).Post("/track/action", handler.TrackAction)
 
 	// GET /track/action/all — получить все действия
 	r.With(
 		withRecover,
-		withRateLimit(5, time.Minute),
+		withRateLimit(500, time.Minute),
 	).Get("/track/action/all", handler.GetAllActions)
 
 	// GET /track/action/grouped — получить все действия, сгруппированные по visit_id
 	r.With(
 		withRecover,
-		withRateLimit(5, time.Minute),
+		withRateLimit(500, time.Minute),
 	).Get("/track/action/grouped", handler.GetActionsGroupedByVisitID)
 }

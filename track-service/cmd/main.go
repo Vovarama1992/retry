@@ -112,7 +112,7 @@ func main() {
 	addr := ":" + os.Getenv("TRACK_SERVICE_PORT")
 	l.Log(logger.LogEntry{
 		Level:   "info",
-		Message: "http listening at " + addr,
+		Message: "http listening at smth new " + addr,
 		Service: "track",
 		Method:  "main",
 	})

@@ -20,6 +20,6 @@ func RegisterRoutes(r chi.Router, handler *Handler) {
 	// GET /track/scenario/get-access — агрегированная статистика по сценарию "Получить доступ"
 	r.With(
 		withRecover,
-		withRateLimit(5, time.Minute),
+		withRateLimit(3000, time.Minute),
 	).Get("/track/scenario/get-access", handler.GetScenarioGetAccess)
 }
