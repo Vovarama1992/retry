@@ -134,16 +134,28 @@ func (c *RoistatClient) SendProceedToPayment(ctx context.Context, action domain.
 }
 
 // достаём значение по ключу из action.Meta (json.RawMessage)
+// поддерживаем как плоский вид, так и вложенный объект "meta"
 func extractFromMeta(meta json.RawMessage, key string) string {
 	if len(meta) == 0 {
 		return ""
 	}
+
 	var m map[string]any
 	if err := json.Unmarshal(meta, &m); err != nil {
 		return ""
 	}
+
+	// 1. Пробуем найти на верхнем уровне
 	if v, ok := m[key].(string); ok {
 		return v
 	}
+
+	// 2. Если есть вложенный meta — копаем туда
+	if inner, ok := m["meta"].(map[string]any); ok {
+		if v, ok := inner[key].(string); ok {
+			return v
+		}
+	}
+
 	return ""
 }
