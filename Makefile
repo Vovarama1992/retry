@@ -15,8 +15,8 @@ tidy:
 	go mod tidy
 
 refresh:
-	cp .env.example .env || true
 	git pull origin master
+	cp .env.example .env || true
 	docker-compose build track db migrate
 	docker-compose up -d db
 	until docker-compose exec db pg_isready -U $(POSTGRES_USER); do sleep 1; done

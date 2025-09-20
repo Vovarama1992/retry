@@ -73,13 +73,14 @@ func (c *RoistatClient) SendProceedToPayment(ctx context.Context, action domain.
 		return nil
 	}
 
-	url := fmt.Sprintf("%s/%s/integration/add-lead", c.apiBase, c.projectID)
+	url := fmt.Sprintf("%s/%s/integration/order/add", c.apiBase, c.projectID)
 
 	bodyObj := map[string]any{
-		"title": "Перейти к оплате",
-		"email": email,
+		"roistat": visit,
+		"email":   email,
+		"title":   "Перейти к оплате",
+		"comment": fmt.Sprintf("Метод оплаты: %s, страница: %s", method, page),
 		"fields": map[string]any{
-			"roistat":        visit,
 			"social_link":    social,
 			"payment_method": method,
 			"page":           page,
