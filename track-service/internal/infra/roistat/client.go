@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -52,57 +53,78 @@ func NewRoistatClient(l logger.Logger) *RoistatClient {
 	}
 }
 
-// SendProceedToPayment отправляет событие "Перейти к оплате" в Ройстат
 func (c *RoistatClient) SendProceedToPayment(ctx context.Context, action domain.Action) error {
-	payload := map[string]any{
-		"roistat_visit": extractFromMeta(action.Meta, "roistat_visit"),
-		"email":         extractFromMeta(action.Meta, "email"),
-		"social_link":   extractFromMeta(action.Meta, "social_link"),
-		"payment":       extractFromMeta(action.Meta, "name"),
+	visit := extractFromMeta(action.Meta, "roistat_visit")
+	email := extractFromMeta(action.Meta, "email")
+	social := extractFromMeta(action.Meta, "social_link")
+	method := extractFromMeta(action.Meta, "name")
+	page := extractFromMeta(action.Meta, "page")
+
+	if visit == "" {
+		c.logger.Log(logger.LogEntry{
+			Level:   "warn",
+			Service: "track",
+			Method:  "SendProceedToPayment",
+			Message: "[Roistat] пропускаем отправку: roistat_visit пуст",
+		})
+		return nil
 	}
 
-	body, _ := json.Marshal(payload)
+	// Собираем URL с query: key и roistat_visit
+	u, err := url.Parse(c.apiURL)
+	if err != nil {
+		return err
+	}
+	q := u.Query()
+	q.Set("key", c.apiKey)
+	q.Set("roistat_visit", visit)
+	u.RawQuery = q.Encode()
+
+	// Тело — как у proxy lead: title/email/fields
+	bodyObj := map[string]any{
+		"title": "Перейти к оплате",
+		"email": email,
+		"fields": map[string]any{
+			"social_link":    social,
+			"payment_method": method,
+			"page":           page,
+		},
+	}
+	body, _ := json.Marshal(bodyObj)
+
+	// Логируем без утечки ключа
+	redacted := *u
+	rq := redacted.Query()
+	rq.Set("key", "***")
+	redacted.RawQuery = rq.Encode()
 
 	c.logger.Log(logger.LogEntry{
 		Level:   "info",
 		Service: "track",
 		Method:  "SendProceedToPayment",
-		Message: fmt.Sprintf("[Roistat] 🚀 отправка: %s", string(body)),
+		Message: fmt.Sprintf("[Roistat] 🚀 POST %s body=%s", redacted.String(), string(body)),
 	})
 
-	req, err := http.NewRequestWithContext(ctx, "POST", c.apiURL+"?key="+c.apiKey, bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewBuffer(body))
 	if err != nil {
-		c.logger.Log(logger.LogEntry{
-			Level:   "error",
-			Service: "track",
-			Method:  "SendProceedToPayment",
-			Message: "failed to create request",
-			Error:   err,
-		})
+		c.logger.Log(logger.LogEntry{Level: "error", Service: "track", Method: "SendProceedToPayment", Message: "failed to create request", Error: err})
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		c.logger.Log(logger.LogEntry{
-			Level:   "error",
-			Service: "track",
-			Method:  "SendProceedToPayment",
-			Message: "http request failed",
-			Error:   err,
-		})
+		c.logger.Log(logger.LogEntry{Level: "error", Service: "track", Method: "SendProceedToPayment", Message: "http request failed", Error: err})
 		return err
 	}
 	defer resp.Body.Close()
 
 	respBody, _ := io.ReadAll(resp.Body)
-
 	c.logger.Log(logger.LogEntry{
 		Level:   "info",
 		Service: "track",
 		Method:  "SendProceedToPayment",
-		Message: fmt.Sprintf("[Roistat] ✅ ответ (%d): %s", resp.StatusCode, string(respBody)),
+		Message: fmt.Sprintf("[Roistat] ✅ статус %d, ответ: %s", resp.StatusCode, string(respBody)),
 	})
 
 	if resp.StatusCode >= 300 {
