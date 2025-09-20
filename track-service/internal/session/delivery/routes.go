@@ -20,24 +20,24 @@ func RegisterRoutes(r chi.Router, handler *Handler) {
 	// GET /track/action/grouped-by-session — экшны, сгруппированные по session_id
 	r.With(
 		withRecover,
-		withRateLimit(500, time.Minute),
+		withRateLimit(20, time.Minute),
 	).Get("/track/action/grouped-by-session", handler.GetActionsGroupedBySessionID)
 
 	r.With(
 		withRecover,
-		withRateLimit(500, time.Minute),
+		withRateLimit(20, time.Minute),
 	).Get("/track/action/grouped-by-visit-readable", handler.GetVisitsSummary)
 
 	// GET /track/session/grouped-by-visit — кол-во сессий на каждый visit_id
 	r.With(
 		withRecover,
-		withRateLimit(500, time.Minute),
+		withRateLimit(20, time.Minute),
 	).Get("/track/session/grouped-by-visit", handler.GetSessionCountByVisitID)
 
 	// GET /track/session/stats — агрегированная статистика по сессиям
 	r.With(
 		withRecover,
-		withRateLimit(500, time.Minute),
+		withRateLimit(20, time.Minute),
 	).Get("/track/session/stats", handler.GetSessionStats)
 
 }

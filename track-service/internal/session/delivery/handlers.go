@@ -9,7 +9,6 @@ import (
 	"github.com/Vovarama1992/go-utils/logger"
 	"github.com/Vovarama1992/retry/pkg/apperror"
 	"github.com/Vovarama1992/retry/pkg/domain"
-	summary "github.com/Vovarama1992/retry/track-service/internal/domain"
 	"github.com/Vovarama1992/retry/track-service/internal/session/models"
 	"github.com/Vovarama1992/retry/track-service/internal/session/ports"
 )
@@ -183,19 +182,16 @@ func (h *Handler) GetVisitsSummary(w http.ResponseWriter, r *http.Request) {
 
 	visitIDs, data, err := h.sessionService.GetVisitsSummary(r.Context(), limit, offset)
 	if err != nil {
-		// если хочешь 200 с пустым ответом при отсутствии — раскомментируй блок ниже
-		// if apperror.IsNotFound(err) {
-		// 	w.Header().Set("Content-Type", "application/json")
-		// 	_ = json.NewEncoder(w).Encode(summary.VisitsSummaryHTTPResponse{VisitIDs: []string{}, Visits: map[string]summary.VisitBlock{}})
-		// 	return
-		// }
 		writeError(w, h.logger, "visit", "GetVisitsSummary", err)
 		return
 	}
 
-	resp := summary.VisitsSummaryHTTPResponse{
-		VisitIDs: visitIDs,
-		Visits:   data,
+	hasMore := len(visitIDs) == limit
+
+	resp := map[string]any{
+		"visit_ids": visitIDs,
+		"visits":    data,
+		"has_more":  hasMore,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

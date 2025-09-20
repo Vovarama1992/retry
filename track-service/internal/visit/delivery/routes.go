@@ -19,16 +19,16 @@ func RegisterRoutes(r chi.Router, handler *Handler) {
 
 	r.With(
 		withRecover,
-		withRateLimit(300, time.Minute),
+		withRateLimit(3000, time.Minute),
 	).Post("/track/visit", handler.TrackVisit)
 
 	r.With(
 		withRecover,
-		withRateLimit(5, time.Minute),
+		withRateLimit(20, time.Minute),
 	).Get("/track/visit/all", handler.GetAllVisits)
 
 	r.With(
 		withRecover,
-		withRateLimit(5, time.Minute),
+		withRateLimit(20, time.Minute),
 	).Get("/track/stats/by-source", handler.GetStatsBySource)
 }
