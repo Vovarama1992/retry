@@ -25,6 +25,8 @@ import (
 	visitdomain "github.com/Vovarama1992/retry/track-service/internal/visit/domain"
 	visitinfra "github.com/Vovarama1992/retry/track-service/internal/visit/infra"
 
+	roistat "github.com/Vovarama1992/retry/track-service/internal/infra/roistat"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 
@@ -72,9 +74,12 @@ func main() {
 	trackService := service.NewTrackService(actionRepo, visitService)
 	scenarioService := scenariodomain.NewScenarioService(scenarioRepo)
 
+	// roistat client
+	roistatClient := roistat.NewRoistatClient(l)
+
 	// delivery
 	visitHandler := visithttp.NewHandler(trackService, visitService, l)
-	actionHandler := actionhttp.NewHandler(trackService, l)
+	actionHandler := actionhttp.NewHandler(trackService, l, roistatClient)
 	sessionHandler := sessionhttp.NewHandler(sessionService, l)
 	scenarioHandler := scenariohttp.NewHandler(scenarioService, l)
 
@@ -112,7 +117,7 @@ func main() {
 	addr := ":" + os.Getenv("TRACK_SERVICE_PORT")
 	l.Log(logger.LogEntry{
 		Level:   "info",
-		Message: "http listening at smth new " + addr,
+		Message: "http listening at " + addr,
 		Service: "track",
 		Method:  "main",
 	})

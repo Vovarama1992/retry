@@ -1,6 +1,7 @@
 package actionhttp
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -10,18 +11,20 @@ import (
 	"github.com/Vovarama1992/go-utils/logger"
 	"github.com/Vovarama1992/retry/pkg/apperror"
 	"github.com/Vovarama1992/retry/pkg/domain"
+	roistat "github.com/Vovarama1992/retry/track-service/internal/infra/roistat"
 	track "github.com/Vovarama1992/retry/track-service/internal/ports"
 	validator "github.com/go-playground/validator/v10"
 )
 
 type Handler struct {
-	trackService track.Service
-	logger       logger.Logger
-	limitAll     int
-	limitGrouped int
+	trackService  track.Service
+	logger        logger.Logger
+	roistatClient *roistat.RoistatClient
+	limitAll      int
+	limitGrouped  int
 }
 
-func NewHandler(trackService track.Service, logger logger.Logger) *Handler {
+func NewHandler(trackService track.Service, logger logger.Logger, roistatClient *roistat.RoistatClient) *Handler {
 	limitAll := 50
 	if v := os.Getenv("TRACK_ACTIONS_ALL_LIMIT"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
@@ -37,10 +40,11 @@ func NewHandler(trackService track.Service, logger logger.Logger) *Handler {
 	}
 
 	return &Handler{
-		trackService: trackService,
-		logger:       logger,
-		limitAll:     limitAll,
-		limitGrouped: limitGrouped,
+		trackService:  trackService,
+		logger:        logger,
+		roistatClient: roistatClient,
+		limitAll:      limitAll,
+		limitGrouped:  limitGrouped,
 	}
 }
 
@@ -114,6 +118,27 @@ func (h *Handler) TrackAction(w http.ResponseWriter, r *http.Request) {
 		})
 		http.Error(w, "Failed to track action", http.StatusInternalServerError)
 		return
+	}
+
+	if req.Type == "click_proceed_to_payment" {
+		go func() {
+			if err := h.roistatClient.SendProceedToPayment(context.Background(), action); err != nil {
+				h.logger.Log(logger.LogEntry{
+					Level:   "error",
+					Message: "Roistat send failed",
+					Error:   err,
+					Service: "track",
+					Method:  "TrackAction",
+				})
+			} else {
+				h.logger.Log(logger.LogEntry{
+					Level:   "info",
+					Message: "Roistat send success",
+					Service: "track",
+					Method:  "TrackAction",
+				})
+			}
+		}()
 	}
 
 	w.WriteHeader(http.StatusCreated)
