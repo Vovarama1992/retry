@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"strconv"
@@ -85,6 +86,13 @@ func (h *Handler) TrackAction(w http.ResponseWriter, r *http.Request) {
 		IPAddress: ip,
 		Meta:      req.Meta,
 	}
+
+	h.logger.Log(logger.LogEntry{
+		Level:   "info",
+		Service: "track",
+		Method:  "TrackAction",
+		Message: fmt.Sprintf("DEBUG raw meta: %s", string(req.Meta)),
+	})
 
 	_, err := h.trackService.TrackAction(r.Context(), req.Type, action)
 	if err != nil {
