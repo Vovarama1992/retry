@@ -14,6 +14,9 @@ RUN go build -o track-service-binary ./track-service/cmd/main.go
 
 FROM debian:bookworm-slim
 
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 # В финальном образе мы создаём структуру /app/track-service
 WORKDIR /app/track-service
 
