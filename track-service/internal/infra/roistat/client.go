@@ -59,7 +59,6 @@ func NewRoistatClient(l logger.Logger) *RoistatClient {
 func (c *RoistatClient) SendProceedToPayment(ctx context.Context, action domain.Action) error {
 	visit := extractFromMeta(action.Meta, "roistat_visit")
 	email := extractFromMeta(action.Meta, "email")
-	social := extractFromMeta(action.Meta, "social_link")
 	method := extractFromMeta(action.Meta, "name")
 	page := extractFromMeta(action.Meta, "page")
 
@@ -73,27 +72,23 @@ func (c *RoistatClient) SendProceedToPayment(ctx context.Context, action domain.
 		return nil
 	}
 
-	url := fmt.Sprintf("%s/%s/integration/order/add", c.apiBase, c.projectID)
+	url := fmt.Sprintf("%s/add-orders?project=%s", c.apiBase, c.projectID)
 
-	bodyObj := map[string]any{
-		"roistat": visit,
-		"email":   email,
-		"title":   "Перейти к оплате",
-		"comment": fmt.Sprintf("Метод оплаты: %s, страница: %s", method, page),
+	order := map[string]any{
+		"id":          action.SessionID, // 👈 тут ключ — сессионный id
+		"name":        "Перейти к оплате",
+		"date_create": time.Now().Format("2006-01-02 15:04:05+0000"),
+		"status":      "0", // "В работе"
+		"roistat":     visit,
+		"price":       "0",
+		"client_id":   email,
 		"fields": map[string]any{
-			"social_link":    social,
 			"payment_method": method,
 			"page":           page,
 		},
 	}
-	body, _ := json.Marshal(bodyObj)
 
-	c.logger.Log(logger.LogEntry{
-		Level:   "info",
-		Service: "track",
-		Method:  "SendProceedToPayment",
-		Message: fmt.Sprintf("[Roistat] 🚀 POST %s body=%s", url, string(body)),
-	})
+	body, _ := json.Marshal([]any{order})
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(body))
 	if err != nil {
@@ -113,7 +108,7 @@ func (c *RoistatClient) SendProceedToPayment(ctx context.Context, action domain.
 		Level:   "info",
 		Service: "track",
 		Method:  "SendProceedToPayment",
-		Message: fmt.Sprintf("[Roistat] ✅ статус %d, ответ: %s", resp.StatusCode, string(respBody)),
+		Message: fmt.Sprintf("[Roistat] статтус %d, ответ: %s", resp.StatusCode, string(respBody)),
 	})
 
 	if resp.StatusCode >= 300 {
